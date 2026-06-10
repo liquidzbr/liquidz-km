@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-lz-green: #9BDB20;
+  --color-lz-bg: #F8F6F3;
+  --color-lz-black: #000000;
+  --color-lz-red: #E53935;
+  --color-lz-yellow: #F9A825;
+  --font-body: "Manrope", Arial, sans-serif;
+}
+
+body {
+  background-color: #F8F6F3;
+  color: #000000;
+  font-family: "Manrope", Arial, sans-serif;
+}
