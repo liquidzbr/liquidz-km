@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 
 export default function RepDetalhe({ params }: { params: Promise<{ repId: string }> }) {
   const { repId } = use(params);
-  const { getTarifaParaMes } = useTarifa();
+  const { getTarifaRep } = useTarifa();
 
   const rep = representantes.find((r) => r.id === repId);
   if (!rep) notFound();
@@ -17,7 +17,7 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
   const reembolso = reembolsos.find((r) => r.repId === repId);
   const viagens = getViagensPorRep(repId);
 
-  const tarifaDoMes = reembolso ? getTarifaParaMes(reembolso.mes) : 0.90;
+  const tarifaDoMes = reembolso ? getTarifaRep(repId, reembolso.mes) : 0.90;
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifaDoMes)
     : null;
@@ -31,7 +31,7 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
 
       <div>
         <h1 className="text-2xl font-black text-lz-black">{rep.nome}</h1>
-        <p className="text-gray-400 text-sm">{rep.regiao} · {rep.email}</p>
+        <p className="text-gray-400 text-sm">{rep.setor} · {rep.email}</p>
       </div>
 
       {saldo && reembolso && (

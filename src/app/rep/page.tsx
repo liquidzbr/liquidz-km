@@ -15,7 +15,7 @@ export default function RepDashboard() {
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifa)
     : null;
-  const positivo = saldo ? saldo.saldoReais >= 0 : true;
+  const sobrou = saldo ? saldo.saldoReais >= 0 : true;
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,28 +25,42 @@ export default function RepDashboard() {
       </div>
 
       {saldo && (
-        <div className={`rounded-2xl p-5 ${positivo ? "bg-lz-green" : "bg-lz-red"}`}>
+        <div className={`rounded-2xl p-5 ${sobrou ? "bg-lz-green" : "bg-lz-red"}`}>
           <p className="text-sm font-semibold text-black/70 mb-1">Saldo do mês</p>
-          <p className="text-4xl font-black text-lz-black">
-            {formatarReais(saldo.saldoReais)}
+          <p className={`text-4xl font-black ${sobrou ? "text-lz-black" : "text-white"}`}>
+            {formatarReais(Math.abs(saldo.saldoReais))}
           </p>
-          <p className="text-sm text-black/60 mt-1">
-            {formatarKm(saldo.saldoKm)} de saldo em KM
+          <p className={`text-sm mt-1 ${sobrou ? "text-black/60" : "text-white/80"}`}>
+            {sobrou ? `Sobrou ${formatarKm(saldo.saldoKm)} de saldo` : `Faltam ${formatarKm(Math.abs(saldo.saldoKm))}`}
           </p>
-          <div className="flex gap-4 mt-4 text-xs text-black/70">
+          <div className={`flex gap-4 mt-4 text-xs ${sobrou ? "text-black/70" : "text-white/70"}`}>
             <span>KM rodados: <strong>{formatarKm(reembolso!.kmRealizados)}</strong></span>
             <span>KM cobertos: <strong>{formatarKm(saldo.kmCobertos)}</strong></span>
           </div>
         </div>
       )}
 
-      <div className="flex gap-3">
-        <Link href="/rep/nova-visita" className="flex-1 bg-lz-black text-lz-green font-bold py-4 rounded-2xl text-center text-sm">
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/rep/nova-visita"
+          className="bg-lz-black text-lz-green font-bold py-4 rounded-2xl text-center text-sm"
+        >
           + Nova visita
         </Link>
-        <Link href="/rep/gasto" className="flex-1 bg-white border-2 border-lz-black text-lz-black font-bold py-4 rounded-2xl text-center text-sm">
-          Registrar gasolina
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/rep/gasto"
+            className="flex-1 bg-white border-2 border-lz-black text-lz-black font-bold py-3 rounded-2xl text-center text-sm"
+          >
+            ⛽ Gasolina
+          </Link>
+          <Link
+            href="/rep/estacionamento"
+            className="flex-1 bg-white border-2 border-lz-black text-lz-black font-bold py-3 rounded-2xl text-center text-sm"
+          >
+            🅿️ Estacionamento
+          </Link>
+        </div>
       </div>
 
       <div>

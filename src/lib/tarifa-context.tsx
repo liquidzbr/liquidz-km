@@ -5,7 +5,7 @@ import { TARIFA_DEFAULT } from "./utils";
 
 export type TarifaVigencia = {
   valor: number;
-  inicio: string; // formato "YYYY-MM" — mês a partir do qual essa tarifa vale
+  inicio: string;
 };
 
 type TarifaContextType = {
@@ -13,6 +13,9 @@ type TarifaContextType = {
   tarifaAtual: number;
   getTarifaParaMes: (mes: string) => number;
   adicionarTarifa: (valor: number, inicioMes: string) => void;
+  tarifasPorRep: { [repId: string]: number };
+  getTarifaRep: (repId: string, mes?: string) => number;
+  setTarifaRep: (repId: string, valor: number) => void;
 };
 
 const TarifaContext = createContext<TarifaContextType>({
@@ -20,6 +23,9 @@ const TarifaContext = createContext<TarifaContextType>({
   tarifaAtual: TARIFA_DEFAULT,
   getTarifaParaMes: () => TARIFA_DEFAULT,
   adicionarTarifa: () => {},
+  tarifasPorRep: {},
+  getTarifaRep: () => TARIFA_DEFAULT,
+  setTarifaRep: () => {},
 });
 
 const HISTORICO_INICIAL: TarifaVigencia[] = [
@@ -28,6 +34,7 @@ const HISTORICO_INICIAL: TarifaVigencia[] = [
 
 export function TarifaProvider({ children }: { children: React.ReactNode }) {
   const [historico, setHistorico] = useState<TarifaVigencia[]>(HISTORICO_INICIAL);
+  const [tarifasPorRep, setTarifasPorRep] = useState<{ [repId: string]: number }>({});
 
   useEffect(() => {
     const salvo = localStorage.getItem("liquidz_tarifa_historico");
@@ -37,17 +44,19 @@ export function TarifaProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(parsed) && parsed.length > 0) setHistorico(parsed);
       } catch {}
     }
+    const salvoRep = localStorage.getItem("liquidz_tarifa_por_rep");
+    if (salvoRep) {
+      try { setTarifasPorRep(JSON.parse(salvoRep)); } catch {}
+    }
   }, []);
 
   function getTarifaParaMes(mes: string): number {
-    // ordena do mais recente para o mais antigo e pega a primeira vigência que começa <= ao mês pedido
     const ordenado = [...historico].sort((a, b) => b.inicio.localeCompare(a.inicio));
     const vigencia = ordenado.find((v) => v.inicio <= mes);
     return vigencia?.valor ?? TARIFA_DEFAULT;
   }
 
   function adicionarTarifa(valor: number, inicioMes: string) {
-    // remove qualquer entrada com o mesmo mês de início antes de adicionar
     const novoHistorico = [
       ...historico.filter((v) => v.inicio !== inicioMes),
       { valor, inicio: inicioMes },
@@ -57,12 +66,21 @@ export function TarifaProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("liquidz_tarifa_historico", JSON.stringify(novoHistorico));
   }
 
-  const tarifaAtual = getTarifaParaMes(
-    new Date().toISOString().slice(0, 7) // "YYYY-MM" do mês atual
-  );
+  function getTarifaRep(repId: string, mes?: string): number {
+    if (tarifasPorRep[repId] !== undefined) return tarifasPorRep[repId];
+    return mes ? getTarifaParaMes(mes) : getTarifaParaMes(new Date().toISOString().slice(0, 7));
+  }
+
+  function setTarifaRep(repId: string, valor: number) {
+    const updated = { ...tarifasPorRep, [repId]: valor };
+    setTarifasPorRep(updated);
+    localStorage.setItem("liquidz_tarifa_por_rep", JSON.stringify(updated));
+  }
+
+  const tarifaAtual = getTarifaParaMes(new Date().toISOString().slice(0, 7));
 
   return (
-    <TarifaContext.Provider value={{ historico, tarifaAtual, getTarifaParaMes, adicionarTarifa }}>
+    <TarifaContext.Provider value={{ historico, tarifaAtual, getTarifaParaMes, adicionarTarifa, tarifasPorRep, getTarifaRep, setTarifaRep }}>
       {children}
     </TarifaContext.Provider>
   );

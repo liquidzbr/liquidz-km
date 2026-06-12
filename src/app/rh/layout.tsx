@@ -7,7 +7,7 @@ export default function RhLayout({ children }: { children: React.ReactNode }) {
         <Link href="/rh" className="text-lz-green font-black text-lg tracking-widest">
           LIQUIDZ
         </Link>
-        <span className="text-white text-xs opacity-60">Painel RH</span>
+        <span className="text-white text-xs opacity-60">Painel Geral</span>
       </header>
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">{children}</main>
     </div>

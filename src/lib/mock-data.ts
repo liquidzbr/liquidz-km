@@ -21,14 +21,37 @@ export type Representante = {
   id: string;
   nome: string;
   email: string;
-  regiao: string;
+  setor: string;
 };
 
-export const representantes: Representante[] = [
-  { id: "rep1", nome: "Ana Lima", email: "ana@liquidz.com.br", regiao: "Sul" },
-  { id: "rep2", nome: "Bruno Rocha", email: "bruno@liquidz.com.br", regiao: "Sudeste" },
-  { id: "rep3", nome: "Carla Mendes", email: "carla@liquidz.com.br", regiao: "Centro-Oeste" },
+export type Gestor = {
+  id: string;
+  nome: string;
+  email: string;
+  setor: string;
+};
+
+export type Estacionamento = {
+  id: string;
+  repId: string;
+  data: string;
+  local: string;
+  valor: number;
+  fotoUrl: string;
+};
+
+export const gestores: Gestor[] = [
+  { id: "gest1", nome: "Carlos Ferreira", email: "carlos@liquidz.com.br", setor: "Sul" },
+  { id: "gest2", nome: "Diana Costa", email: "diana@liquidz.com.br", setor: "Sudeste" },
 ];
+
+export const representantes: Representante[] = [
+  { id: "rep1", nome: "Ana Lima", email: "ana@liquidz.com.br", setor: "Sul" },
+  { id: "rep2", nome: "Bruno Rocha", email: "bruno@liquidz.com.br", setor: "Sudeste" },
+  { id: "rep3", nome: "Carla Mendes", email: "carla@liquidz.com.br", setor: "Centro-Oeste" },
+];
+
+export const estacionamentos: Estacionamento[] = [];
 
 export const viagens: Viagem[] = [
   // Junho

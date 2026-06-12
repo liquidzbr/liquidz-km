@@ -9,10 +9,22 @@ export default function RegistrarGasto() {
   const router = useRouter();
   const { tarifa } = useTarifa();
   const [valor, setValor] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
   const kmCobertos = valorNum > 0 ? calcularKmCobertos(valorNum, tarifa) : 0;
+  const podeEnviar = valorNum > 0 && foto !== null;
+
+  function onFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFoto(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
 
   function salvar() {
     setSalvo(true);
@@ -58,13 +70,46 @@ export default function RegistrarGasto() {
         </div>
       )}
 
+      <div>
+        <label className="text-sm font-semibold text-lz-black block mb-2">
+          Comprovante <span className="text-lz-red text-xs font-normal">* obrigatório</span>
+        </label>
+        {fotoPreview ? (
+          <div className="relative">
+            <img src={fotoPreview} alt="Comprovante" className="w-full rounded-xl object-cover max-h-52" />
+            <button
+              onClick={() => { setFoto(null); setFotoPreview(null); }}
+              className="absolute top-2 right-2 bg-black/60 text-white text-xs px-3 py-1 rounded-full"
+            >
+              Trocar foto
+            </button>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-white hover:border-lz-green transition-colors">
+            <span className="text-3xl mb-2">📷</span>
+            <span className="text-sm text-gray-400">Toque para tirar foto ou escolher arquivo</span>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={onFotoChange}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
       <button
         onClick={salvar}
-        disabled={valorNum <= 0}
+        disabled={!podeEnviar}
         className="bg-lz-black text-lz-green font-bold py-4 rounded-full text-lg disabled:opacity-40"
       >
         Salvar
       </button>
+
+      {valorNum > 0 && !foto && (
+        <p className="text-center text-xs text-gray-400">Adicione o comprovante para salvar</p>
+      )}
     </div>
   );
 }

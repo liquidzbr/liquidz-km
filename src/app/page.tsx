@@ -7,7 +7,7 @@ export default function Home() {
   const [mostraDemo, setMostraDemo] = useState(false);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: '#FF69B4' }}>
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-lz-bg">
       <div className="mb-10 text-center">
         <span className="inline-block bg-lz-black text-lz-green font-black text-2xl tracking-widest px-4 py-1 rounded-sm mb-4">
           LIQUIDZ
