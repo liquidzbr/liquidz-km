@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { representantes, reembolsos, getMesesDisponiveis } from "@/lib/mock-data";
+import type { Representante, Reembolso } from "@/lib/mock-data";
+import { fetchRepresentantes, fetchReembolsos } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, TARIFA_DEFAULT } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
@@ -23,8 +24,11 @@ export default function RhDashboard() {
   const { perfil, carregando } = usePerfil();
   const { historico, tarifaAtual, getTarifaParaMes, adicionarTarifa, tarifasPorRep, getTarifaRep, setTarifaRep } = useTarifa();
 
-  const meses = getMesesDisponiveis();
-  const [mesSelecionado, setMesSelecionado] = useState(meses[meses.length - 1] ?? mesAtual());
+  const [representantes, setRepresentantes] = useState<Representante[]>([]);
+  const [reembolsos, setReembolsos] = useState<Reembolso[]>([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
+
+  const [mesSelecionado, setMesSelecionado] = useState<string>(mesAtual());
   const [editandoTarifa, setEditandoTarifa] = useState(false);
   const [inputValor, setInputValor] = useState("");
   const [inputMes, setInputMes] = useState(mesAtual());
@@ -36,6 +40,23 @@ export default function RhDashboard() {
     if (!carregando && perfil?.papel === "rep") router.replace("/rep");
   }, [carregando, perfil, router]);
 
+  // Carrega representantes e reembolsos (a RLS filtra por papel/área)
+  useEffect(() => {
+    if (carregando || !perfil || perfil.papel === "rep") return;
+    let ativo = true;
+    (async () => {
+      const [reps, rmb] = await Promise.all([fetchRepresentantes(), fetchReembolsos()]);
+      if (!ativo) return;
+      setRepresentantes(reps);
+      setReembolsos(rmb);
+      const mesesDisp = [...new Set(rmb.map((r) => r.mes))].sort();
+      if (mesesDisp.length) setMesSelecionado(mesesDisp[mesesDisp.length - 1]);
+      setCarregandoDados(false);
+    })();
+    return () => { ativo = false; };
+  }, [carregando, perfil]);
+
+  const meses = [...new Set(reembolsos.map((r) => r.mes))].sort();
   const ehRh = perfil?.papel === "rh";
   // RH pode filtrar opcionalmente por área; gestor fica travado na própria área
   const [areaFiltroRh, setAreaFiltroRh] = useState<string | null>(null);
@@ -80,8 +101,8 @@ export default function RhDashboard() {
 
   const historicoOrdenado = [...historico].sort((a, b) => b.inicio.localeCompare(a.inicio));
 
-  // Aguarda resolver o perfil antes de renderizar (evita flash da visão errada)
-  if (carregando || perfil?.papel === "rep") {
+  // Aguarda resolver o perfil e carregar os dados (evita flash da visão errada)
+  if (carregando || carregandoDados || perfil?.papel === "rep") {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />

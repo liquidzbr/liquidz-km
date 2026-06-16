@@ -1,13 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { representantes, reembolsos, getViagensPorRep } from "@/lib/mock-data";
+import type { Representante, Reembolso, Viagem } from "@/lib/mock-data";
+import {
+  fetchRepresentantes, fetchReembolsos, fetchViagens, fetchGastos, fetchEstacionamentos,
+  urlComprovante, type Gasto, type Estacionamento,
+} from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
-import { notFound } from "next/navigation";
+
+// Abre o comprovante (arquivo privado) via URL assinada temporária
+function ComprovanteLink({ path }: { path: string | null }) {
+  const [abrindo, setAbrindo] = useState(false);
+  if (!path) return <span className="text-xs text-gray-300">sem foto</span>;
+  async function abrir() {
+    setAbrindo(true);
+    const url = await urlComprovante(path!);
+    setAbrindo(false);
+    if (url) window.open(url, "_blank");
+  }
+  return (
+    <button
+      onClick={abrir}
+      disabled={abrindo}
+      className="text-xs font-semibold text-lz-black underline underline-offset-2 disabled:opacity-50"
+    >
+      {abrindo ? "abrindo…" : "📎 ver"}
+    </button>
+  );
+}
 
 export default function RepDetalhe({ params }: { params: Promise<{ repId: string }> }) {
   const { repId } = use(params);
@@ -15,35 +39,63 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
   const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
 
-  const rep = representantes.find((r) => r.id === repId);
-  if (!rep) notFound();
+  const [rep, setRep] = useState<Representante | null>(null);
+  const [reembolso, setReembolso] = useState<Reembolso | undefined>(undefined);
+  const [viagens, setViagens] = useState<Viagem[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [estacionamentos, setEstacionamentos] = useState<Estacionamento[]>([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
+  const [semAcesso, setSemAcesso] = useState(false);
 
-  // Gestor só vê reps da própria área; reps não acessam detalhes do RH
-  const semAcesso = !carregando && perfil != null && (
-    perfil.papel === "rep" ||
-    (perfil.papel === "gestor" && perfil.area !== rep.setor)
-  );
-
+  // Reps não acessam o detalhe do RH
   useEffect(() => {
-    if (semAcesso) router.replace(perfil?.papel === "rep" ? "/rep" : "/rh");
-  }, [semAcesso, perfil, router]);
+    if (!carregando && perfil?.papel === "rep") router.replace("/rep");
+  }, [carregando, perfil, router]);
 
-  if (carregando || semAcesso) {
+  // Carrega os dados do rep (a RLS impede gestor de ver rep de outra área)
+  useEffect(() => {
+    if (carregando || !perfil || perfil.papel === "rep") return;
+    let ativo = true;
+    (async () => {
+      const reps = await fetchRepresentantes();
+      const alvo = reps.find((r) => r.id === repId) ?? null;
+      if (!ativo) return;
+      if (!alvo) { setSemAcesso(true); setCarregandoDados(false); return; }
+      setRep(alvo);
+      const [rmb, vgs, gst, est] = await Promise.all([
+        fetchReembolsos(),
+        fetchViagens(repId),
+        fetchGastos(repId),
+        fetchEstacionamentos(repId),
+      ]);
+      if (!ativo) return;
+      setReembolso(rmb.find((r) => r.repId === repId));
+      setViagens(vgs);
+      setGastos(gst);
+      setEstacionamentos(est);
+      setCarregandoDados(false);
+    })();
+    return () => { ativo = false; };
+  }, [carregando, perfil, repId]);
+
+  // Gestor de outra área (ou rep inexistente) → volta pro painel
+  useEffect(() => {
+    if (semAcesso) router.replace("/rh");
+  }, [semAcesso, router]);
+
+  const tarifaDoMes = rep && reembolso ? getTarifaRep(repId, reembolso.mes) : 0.90;
+  const saldo = reembolso
+    ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifaDoMes)
+    : null;
+  const positivo = saldo ? saldo.saldoReais >= 0 : true;
+
+  if (carregando || carregandoDados || semAcesso || perfil?.papel === "rep" || !rep) {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
       </div>
     );
   }
-
-  const reembolso = reembolsos.find((r) => r.repId === repId);
-  const viagens = getViagensPorRep(repId);
-
-  const tarifaDoMes = reembolso ? getTarifaRep(repId, reembolso.mes) : 0.90;
-  const saldo = reembolso
-    ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifaDoMes)
-    : null;
-  const positivo = saldo ? saldo.saldoReais >= 0 : true;
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,6 +131,44 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
           </div>
         </div>
       )}
+
+      {/* Comprovantes de gasolina */}
+      <div>
+        <h2 className="text-base font-bold text-lz-black mb-3">Gastos de gasolina ({gastos.length})</h2>
+        <div className="flex flex-col gap-2">
+          {gastos.length === 0 && (
+            <p className="text-gray-400 text-sm">Nenhum gasto com comprovante.</p>
+          )}
+          {gastos.map((g) => (
+            <div key={g.id} className="bg-white rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-sm text-lz-black">{formatarReais(g.valor)}</p>
+                <p className="text-xs text-gray-400">{formatarData(g.data)}</p>
+              </div>
+              <ComprovanteLink path={g.comprovanteUrl} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Comprovantes de estacionamento */}
+      <div>
+        <h2 className="text-base font-bold text-lz-black mb-3">Estacionamento ({estacionamentos.length})</h2>
+        <div className="flex flex-col gap-2">
+          {estacionamentos.length === 0 && (
+            <p className="text-gray-400 text-sm">Nenhum estacionamento registrado.</p>
+          )}
+          {estacionamentos.map((e) => (
+            <div key={e.id} className="bg-white rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-sm text-lz-black">{e.local}</p>
+                <p className="text-xs text-gray-400">{formatarData(e.data)} · {formatarReais(e.valor)}</p>
+              </div>
+              <ComprovanteLink path={e.fotoUrl} />
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div>
         <h2 className="text-base font-bold text-lz-black mb-3">

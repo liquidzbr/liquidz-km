@@ -1,37 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getReembolsoAtual, getViagensPorRep, getRepPorEmail } from "@/lib/mock-data";
+import type { Representante, Reembolso, Viagem } from "@/lib/mock-data";
+import { fetchRepresentantes, fetchReembolsos, fetchViagens } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
+
+const MES_ATUAL = "2026-06";
 
 export default function RepDashboard() {
   const router = useRouter();
   const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
 
-  // Identifica o rep logado pelo email
-  const rep = getRepPorEmail(perfil?.email);
+  const [rep, setRep] = useState<Representante | null>(null);
+  const [reembolso, setReembolso] = useState<Reembolso | undefined>(undefined);
+  const [viagens, setViagens] = useState<Viagem[]>([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
 
   // Gestor/RH não têm visão de rep — vão para o painel
   useEffect(() => {
     if (!carregando && perfil && perfil.papel !== "rep") router.replace("/rh");
   }, [carregando, perfil, router]);
 
-  const reembolso = rep ? getReembolsoAtual(rep.id) : undefined;
-  const viagens = rep ? getViagensPorRep(rep.id) : [];
-  const tarifa = rep ? getTarifaRep(rep.id, "2026-06") : 0;
+  // Carrega os dados do rep logado (a RLS já devolve só os dele)
+  useEffect(() => {
+    if (carregando || perfil?.papel !== "rep") return;
+    let ativo = true;
+    (async () => {
+      const [reps, reembolsos] = await Promise.all([fetchRepresentantes(), fetchReembolsos()]);
+      const meuRep = reps.find((r) => r.email === perfil.email) ?? reps[0] ?? null;
+      if (!ativo) return;
+      setRep(meuRep);
+      setReembolso(reembolsos.find((r) => r.repId === meuRep?.id && r.mes === MES_ATUAL));
+      if (meuRep) setViagens(await fetchViagens(meuRep.id));
+      if (ativo) setCarregandoDados(false);
+    })();
+    return () => { ativo = false; };
+  }, [carregando, perfil]);
+
+  const tarifa = rep ? getTarifaRep(rep.id, MES_ATUAL) : 0;
 
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifa)
     : null;
   const sobrou = saldo ? saldo.saldoReais >= 0 : true;
 
-  // Aguarda resolver o perfil; bloqueia render para não-reps
-  if (carregando || !perfil || perfil.papel !== "rep") {
+  // Aguarda resolver o perfil e os dados; bloqueia render para não-reps
+  if (carregando || carregandoDados || !perfil || perfil.papel !== "rep") {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />

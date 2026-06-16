@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { representantes, reembolsos, viagens, getMesesDisponiveis } from "@/lib/mock-data";
+import type { Representante, Reembolso, Viagem } from "@/lib/mock-data";
+import { fetchRepresentantes, fetchReembolsos, fetchViagens } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
@@ -27,14 +28,40 @@ export default function Analises() {
   const router = useRouter();
   const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
-  const meses = getMesesDisponiveis();
-  const [mesSelecionado, setMesSelecionado] = useState(meses[meses.length - 1]);
+
+  const [representantes, setRepresentantes] = useState<Representante[]>([]);
+  const [reembolsos, setReembolsos] = useState<Reembolso[]>([]);
+  const [viagens, setViagens] = useState<Viagem[]>([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
+  const [mesSelecionado, setMesSelecionado] = useState<string>("");
 
   // Reps não acessam análises
   useEffect(() => {
     if (!carregando && perfil?.papel === "rep") router.replace("/rep");
   }, [carregando, perfil, router]);
 
+  // Carrega dados (RLS filtra por papel/área)
+  useEffect(() => {
+    if (carregando || !perfil || perfil.papel === "rep") return;
+    let ativo = true;
+    (async () => {
+      const [reps, rmb, vgs] = await Promise.all([
+        fetchRepresentantes(),
+        fetchReembolsos(),
+        fetchViagens(),
+      ]);
+      if (!ativo) return;
+      setRepresentantes(reps);
+      setReembolsos(rmb);
+      setViagens(vgs);
+      const mesesDisp = [...new Set(rmb.map((r) => r.mes))].sort();
+      if (mesesDisp.length) setMesSelecionado(mesesDisp[mesesDisp.length - 1]);
+      setCarregandoDados(false);
+    })();
+    return () => { ativo = false; };
+  }, [carregando, perfil]);
+
+  const meses = [...new Set(reembolsos.map((r) => r.mes))].sort();
   const ehRh = perfil?.papel === "rh";
   const setores = ["Geral", ...Array.from(new Set(representantes.map(r => r.setor))).sort()];
   const [setorFiltroRh, setSetorFiltroRh] = useState("Geral");
@@ -116,7 +143,7 @@ export default function Analises() {
     URL.revokeObjectURL(url);
   }
 
-  if (carregando || perfil?.papel === "rep") {
+  if (carregando || carregandoDados || perfil?.papel === "rep") {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
