@@ -110,3 +110,34 @@ export async function urlComprovante(path: string): Promise<string | null> {
     .createSignedUrl(path, 60 * 10); // 10 minutos
   return data?.signedUrl ?? null;
 }
+
+// Acha o representante correspondente ao email logado (RLS já restringe ao próprio).
+export async function fetchMeuRep(email: string | null | undefined): Promise<Representante | null> {
+  const reps = await fetchRepresentantes();
+  if (!email) return reps[0] ?? null;
+  return reps.find((r) => r.email.toLowerCase() === email.toLowerCase()) ?? reps[0] ?? null;
+}
+
+// Sobe o arquivo para o bucket privado e devolve o caminho salvo.
+async function uploadComprovante(repId: string, prefixo: string, foto: File, ts: number): Promise<string> {
+  const supabase = createClient();
+  const ext = foto.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${repId}/${prefixo}-${ts}.${ext}`;
+  const { error } = await supabase.storage.from("comprovantes").upload(path, foto);
+  if (error) throw error;
+  return path;
+}
+
+export async function criarGasto(repId: string, valor: number, foto: File, ts: number): Promise<void> {
+  const supabase = createClient();
+  const comprovante_url = await uploadComprovante(repId, "gasto", foto, ts);
+  const { error } = await supabase.from("gastos").insert({ rep_id: repId, valor, comprovante_url });
+  if (error) throw error;
+}
+
+export async function criarEstacionamento(repId: string, local: string, valor: number, foto: File, ts: number): Promise<void> {
+  const supabase = createClient();
+  const foto_url = await uploadComprovante(repId, "estacionamento", foto, ts);
+  const { error } = await supabase.from("estacionamentos").insert({ rep_id: repId, local, valor, foto_url });
+  if (error) throw error;
+}

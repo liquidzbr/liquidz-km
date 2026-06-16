@@ -1,21 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { calcularKmCobertos, formatarReais, formatarKm } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
+import { usePerfil } from "@/lib/use-perfil";
+import { fetchMeuRep, criarGasto } from "@/lib/dados";
 
 export default function RegistrarGasto() {
   const router = useRouter();
+  const { perfil } = usePerfil();
   const { tarifaAtual: tarifa } = useTarifa();
+  const [repId, setRepId] = useState<string | null>(null);
   const [valor, setValor] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Identifica o rep logado
+  useEffect(() => {
+    if (perfil?.papel === "rep") fetchMeuRep(perfil.email).then((r) => setRepId(r?.id ?? null));
+  }, [perfil]);
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
   const kmCobertos = valorNum > 0 ? calcularKmCobertos(valorNum, tarifa) : 0;
-  const podeEnviar = valorNum > 0 && foto !== null;
+  const podeEnviar = valorNum > 0 && foto !== null && repId !== null && !salvando;
 
   function onFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -26,9 +37,18 @@ export default function RegistrarGasto() {
     reader.readAsDataURL(file);
   }
 
-  function salvar() {
-    setSalvo(true);
-    setTimeout(() => router.push("/rep"), 1500);
+  async function salvar() {
+    if (!repId || !foto) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await criarGasto(repId, valorNum, foto, Date.now());
+      setSalvo(true);
+      setTimeout(() => router.push("/rep"), 1500);
+    } catch {
+      setErro("Não foi possível salvar. Tente novamente.");
+      setSalvando(false);
+    }
   }
 
   if (salvo) {
@@ -104,8 +124,10 @@ export default function RegistrarGasto() {
         disabled={!podeEnviar}
         className="bg-lz-black text-lz-green font-bold py-4 rounded-full text-lg disabled:opacity-40"
       >
-        Salvar
+        {salvando ? "Salvando..." : "Salvar"}
       </button>
+
+      {erro && <p className="text-center text-xs text-lz-red">{erro}</p>}
 
       {valorNum > 0 && !foto && (
         <p className="text-center text-xs text-gray-400">Adicione o comprovante para salvar</p>

@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatarReais } from "@/lib/utils";
+import { usePerfil } from "@/lib/use-perfil";
+import { fetchMeuRep, criarEstacionamento } from "@/lib/dados";
 
 export default function RegistrarEstacionamento() {
   const router = useRouter();
+  const { perfil } = usePerfil();
+  const [repId, setRepId] = useState<string | null>(null);
   const [local, setLocal] = useState("");
   const [valor, setValor] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Identifica o rep logado
+  useEffect(() => {
+    if (perfil?.papel === "rep") fetchMeuRep(perfil.email).then((r) => setRepId(r?.id ?? null));
+  }, [perfil]);
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const podeEnviar = local.trim().length > 0 && valorNum > 0 && foto !== null;
+  const podeEnviar = local.trim().length > 0 && valorNum > 0 && foto !== null && repId !== null && !salvando;
 
   function onFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -24,9 +35,18 @@ export default function RegistrarEstacionamento() {
     reader.readAsDataURL(file);
   }
 
-  function salvar() {
-    setSalvo(true);
-    setTimeout(() => router.push("/rep"), 1500);
+  async function salvar() {
+    if (!repId || !foto) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await criarEstacionamento(repId, local.trim(), valorNum, foto, Date.now());
+      setSalvo(true);
+      setTimeout(() => router.push("/rep"), 1500);
+    } catch {
+      setErro("Não foi possível salvar. Tente novamente.");
+      setSalvando(false);
+    }
   }
 
   if (salvo) {
@@ -114,10 +134,12 @@ export default function RegistrarEstacionamento() {
         disabled={!podeEnviar}
         className="bg-lz-black text-lz-green font-bold py-4 rounded-full text-lg disabled:opacity-40"
       >
-        Salvar
+        {salvando ? "Salvando..." : "Salvar"}
       </button>
 
-      {!podeEnviar && (local || valorNum > 0) && (
+      {erro && <p className="text-center text-xs text-lz-red">{erro}</p>}
+
+      {!podeEnviar && !salvando && (local || valorNum > 0) && (
         <p className="text-center text-xs text-gray-400">
           {!foto ? "Adicione o comprovante para salvar" : "Preencha todos os campos"}
         </p>
