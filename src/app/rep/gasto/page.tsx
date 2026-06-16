@@ -7,7 +7,7 @@ import { useTarifa } from "@/lib/tarifa-context";
 
 export default function RegistrarGasto() {
   const router = useRouter();
-  const { tarifa } = useTarifa();
+  const { tarifaAtual: tarifa } = useTarifa();
   const [valor, setValor] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);

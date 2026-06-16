@@ -41,14 +41,16 @@ export type Estacionamento = {
 };
 
 export const gestores: Gestor[] = [
-  { id: "gest1", nome: "Carlos Ferreira", email: "carlos@liquidz.com.br", setor: "Sul" },
-  { id: "gest2", nome: "Diana Costa", email: "diana@liquidz.com.br", setor: "Sudeste" },
+  { id: "gest1", nome: "Denis Hesz Pauli", email: "denis.pauli@liquidz.com.br", setor: "Comercial" },
+  { id: "gest2", nome: "Gabriela Cunha", email: "gabriela.cunha@liquidz.com.br", setor: "Saúde" },
 ];
 
 export const representantes: Representante[] = [
-  { id: "rep1", nome: "Ana Lima", email: "ana@liquidz.com.br", setor: "Sul" },
-  { id: "rep2", nome: "Bruno Rocha", email: "bruno@liquidz.com.br", setor: "Sudeste" },
-  { id: "rep3", nome: "Carla Mendes", email: "carla@liquidz.com.br", setor: "Centro-Oeste" },
+  { id: "rep1", nome: "Felippe Vidal", email: "felippe.vidal@liquidz.com.br", setor: "Comercial" },
+  { id: "rep2", nome: "Julia Arantes", email: "julia.arantes@liquidz.com.br", setor: "Comercial" },
+  { id: "rep3", nome: "Julia Urban", email: "julia.urban@liquidz.com.br", setor: "Comercial" },
+  { id: "rep4", nome: "Maycon Brito", email: "maycon.brito@liquidz.com.br", setor: "Comercial" },
+  { id: "rep5", nome: "Renata Mayer", email: "renata.mayer@liquidz.com.br", setor: "Saúde" },
 ];
 
 export const estacionamentos: Estacionamento[] = [];
@@ -63,6 +65,10 @@ export const viagens: Viagem[] = [
   { id: "v6", repId: "rep2", data: "2026-06-06", cliente: "Mercadão Norte", kmRodados: 89, valorKm: 80.10, enderecoSaida: "Av. Paulista, 1000 — São Paulo", enderecoChegada: "Av. Zaki Narchi, 700 — Guarulhos" },
   { id: "v7", repId: "rep3", data: "2026-06-03", cliente: "Loja Esporte+", kmRodados: 28, valorKm: 25.20, enderecoSaida: "Setor Bueno, Q. 15 — Goiânia", enderecoChegada: "Av. T-63, 1234 — Goiânia" },
   { id: "v8", repId: "rep3", data: "2026-06-07", cliente: "Empório Saudável", kmRodados: 41, valorKm: 36.90, enderecoSaida: "Av. T-63, 1234 — Goiânia", enderecoChegada: "Rua 85, 320 — Goiânia" },
+  { id: "v18", repId: "rep4", data: "2026-06-02", cliente: "Atacadão Vista", kmRodados: 45, valorKm: 40.50, enderecoSaida: "Rua das Palmeiras, 80 — Campinas", enderecoChegada: "Av. John Boyd Dunlop, 3000 — Campinas" },
+  { id: "v19", repId: "rep4", data: "2026-06-05", cliente: "Mercado Bom Preço", kmRodados: 63, valorKm: 56.70, enderecoSaida: "Av. John Boyd Dunlop, 3000 — Campinas", enderecoChegada: "Rod. Dom Pedro I, km 130 — Valinhos" },
+  { id: "v20", repId: "rep5", data: "2026-06-03", cliente: "Clínica Bem Viver", kmRodados: 22, valorKm: 19.80, enderecoSaida: "Rua Oscar Freire, 200 — São Paulo", enderecoChegada: "Av. Rebouças, 1500 — São Paulo" },
+  { id: "v21", repId: "rep5", data: "2026-06-06", cliente: "Consultório Nutri+", kmRodados: 35, valorKm: 31.50, enderecoSaida: "Av. Rebouças, 1500 — São Paulo", enderecoChegada: "Av. Brigadeiro Faria Lima, 2000 — São Paulo" },
   // Maio
   { id: "v9",  repId: "rep1", data: "2026-05-05", cliente: "Mercado São Paulo", kmRodados: 34, valorKm: 30.60, enderecoSaida: "Rua das Flores, 100 — Curitiba", enderecoChegada: "Av. Sete de Setembro, 2775 — Curitiba" },
   { id: "v10", repId: "rep1", data: "2026-05-12", cliente: "Farmácia Vida", kmRodados: 22, valorKm: 19.80, enderecoSaida: "Av. Sete de Setembro, 2775 — Curitiba", enderecoChegada: "Rua XV de Novembro, 450 — Curitiba" },
@@ -81,6 +87,8 @@ export const reembolsos: Reembolso[] = [
   { id: "r1", repId: "rep1", mes: "2026-06", investimentoGasolina: 120, kmRealizados: 104 },
   { id: "r2", repId: "rep2", mes: "2026-06", investimentoGasolina: 250, kmRealizados: 168 },
   { id: "r3", repId: "rep3", mes: "2026-06", investimentoGasolina: 90,  kmRealizados: 69 },
+  { id: "r10", repId: "rep4", mes: "2026-06", investimentoGasolina: 140, kmRealizados: 108 },
+  { id: "r11", repId: "rep5", mes: "2026-06", investimentoGasolina: 70,  kmRealizados: 57 },
   // Maio
   { id: "r4", repId: "rep1", mes: "2026-05", investimentoGasolina: 105, kmRealizados: 98 },
   { id: "r5", repId: "rep2", mes: "2026-05", investimentoGasolina: 190, kmRealizados: 145 },

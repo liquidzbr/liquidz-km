@@ -21,7 +21,7 @@ async function geocodificar(lat: number, lon: number): Promise<string | null> {
 
 export default function NovaVisita() {
   const router = useRouter();
-  const { tarifa } = useTarifa();
+  const { tarifaAtual: tarifa } = useTarifa();
   const [etapa, setEtapa] = useState<Etapa>("idle");
   const [inicio, setInicio] = useState<Coordenada | null>(null);
   const [cliente, setCliente] = useState("");

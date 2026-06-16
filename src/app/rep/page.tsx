@@ -8,9 +8,10 @@ import { useTarifa } from "@/lib/tarifa-context";
 const REP_ID = "rep1";
 
 export default function RepDashboard() {
-  const { tarifa } = useTarifa();
+  const { getTarifaRep } = useTarifa();
   const reembolso = getReembolsoAtual(REP_ID);
   const viagens = getViagensPorRep(REP_ID);
+  const tarifa = getTarifaRep(REP_ID, "2026-06");
 
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifa)
@@ -20,7 +21,7 @@ export default function RepDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-black text-lz-black">Olá, Ana!</h1>
+        <h1 className="text-2xl font-black text-lz-black">Olá, Felippe!</h1>
         <p className="text-gray-500 text-sm">Junho de 2026 · tarifa: {formatarReais(tarifa)}/km</p>
       </div>
 
