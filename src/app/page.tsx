@@ -84,9 +84,7 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-lz-bg">
       <div className="mb-10 text-center">
-        <span className="inline-block bg-lz-black text-lz-green font-black text-2xl tracking-widest px-4 py-1 rounded-sm mb-4">
-          LIQUIDZ
-        </span>
+        <img src="/logo-preto.png" alt="LIQUIDZ" className="h-10 w-auto mx-auto mb-5" />
         <h1 className="text-3xl font-black text-lz-black">Controle de KM</h1>
         <p className="text-gray-500 mt-2 text-sm">Acesse com sua conta corporativa</p>
       </div>
