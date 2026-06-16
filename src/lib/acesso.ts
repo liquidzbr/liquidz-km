@@ -18,6 +18,7 @@ export const EMAILS_AUTORIZADOS: Record<string, AcessoInfo> = {
   "julia.urban@liquidz.com.br":    { nome: "Julia Urban",      papel: "rep",    area: "Comercial" },
   "maycon.brito@liquidz.com.br":   { nome: "Maycon Brito",     papel: "rep",    area: "Comercial" },
   "renata.mayer@liquidz.com.br":   { nome: "Renata Mayer",     papel: "rep",    area: "Saúde" },
+  "james.sancho@liquidz.com.br":   { nome: "James Sancho",     papel: "rep",    area: "RH" },
 };
 
 export function emailAutorizado(email: string | null | undefined): boolean {
