@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { Representante, Reembolso } from "@/lib/mock-data";
+import type { Representante, Reembolso } from "@/lib/dados";
 import { fetchRepresentantes, fetchReembolsos } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, TARIFA_DEFAULT } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";

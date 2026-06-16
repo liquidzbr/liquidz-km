@@ -1,7 +1,32 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { Representante, Reembolso, Viagem } from "@/lib/mock-data";
+
+export type Representante = {
+  id: string;
+  nome: string;
+  email: string;
+  setor: string;
+};
+
+export type Reembolso = {
+  id: string;
+  repId: string;
+  mes: string;
+  investimentoGasolina: number;
+  kmRealizados: number;
+};
+
+export type Viagem = {
+  id: string;
+  repId: string;
+  data: string;
+  cliente: string;
+  kmRodados: number;
+  valorKm: number;
+  enderecoSaida?: string;
+  enderecoChegada?: string;
+};
 
 // Tipos das tabelas de comprovantes
 export type Gasto = {

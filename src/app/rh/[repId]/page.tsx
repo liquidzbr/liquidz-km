@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Representante, Reembolso, Viagem } from "@/lib/mock-data";
 import {
   fetchRepresentantes, fetchReembolsos, fetchViagens, fetchGastos, fetchEstacionamentos,
-  urlComprovante, type Gasto, type Estacionamento,
+  urlComprovante,
+  type Representante, type Reembolso, type Viagem, type Gasto, type Estacionamento,
 } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
