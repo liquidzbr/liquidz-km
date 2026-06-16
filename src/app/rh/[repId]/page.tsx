@@ -1,18 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { representantes, reembolsos, getViagensPorRep } from "@/lib/mock-data";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
+import { usePerfil } from "@/lib/use-perfil";
 import { notFound } from "next/navigation";
 
 export default function RepDetalhe({ params }: { params: Promise<{ repId: string }> }) {
   const { repId } = use(params);
+  const router = useRouter();
+  const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
 
   const rep = representantes.find((r) => r.id === repId);
   if (!rep) notFound();
+
+  // Gestor só vê reps da própria área; reps não acessam detalhes do RH
+  const semAcesso = !carregando && perfil != null && (
+    perfil.papel === "rep" ||
+    (perfil.papel === "gestor" && perfil.area !== rep.setor)
+  );
+
+  useEffect(() => {
+    if (semAcesso) router.replace(perfil?.papel === "rep" ? "/rep" : "/rh");
+  }, [semAcesso, perfil, router]);
+
+  if (carregando || semAcesso) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const reembolso = reembolsos.find((r) => r.repId === repId);
   const viagens = getViagensPorRep(repId);

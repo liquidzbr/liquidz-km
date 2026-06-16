@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { representantes, reembolsos, viagens, getMesesDisponiveis } from "@/lib/mock-data";
 import { calcularSaldo, formatarReais, formatarKm } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
+import { usePerfil } from "@/lib/use-perfil";
 
 function formatarMes(mesISO: string): string {
   const [ano, mes] = mesISO.split("-");
@@ -22,12 +24,22 @@ function BarraHorizontal({ valor, max, cor }: { valor: number; max: number; cor:
 }
 
 export default function Analises() {
+  const router = useRouter();
+  const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
   const meses = getMesesDisponiveis();
   const [mesSelecionado, setMesSelecionado] = useState(meses[meses.length - 1]);
 
+  // Reps não acessam análises
+  useEffect(() => {
+    if (!carregando && perfil?.papel === "rep") router.replace("/rep");
+  }, [carregando, perfil, router]);
+
+  const ehRh = perfil?.papel === "rh";
   const setores = ["Geral", ...Array.from(new Set(representantes.map(r => r.setor))).sort()];
-  const [setorFiltro, setSetorFiltro] = useState("Geral");
+  const [setorFiltroRh, setSetorFiltroRh] = useState("Geral");
+  // RH escolhe; gestor fica travado na própria área
+  const setorFiltro = ehRh ? setorFiltroRh : (perfil?.area ?? "Geral");
 
   const reembolsosComSaldo = reembolsos.map((r) => {
     const tarifa = getTarifaRep(r.repId, r.mes);
@@ -104,6 +116,14 @@ export default function Analises() {
     URL.revokeObjectURL(url);
   }
 
+  if (carregando || perfil?.papel === "rep") {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -137,18 +157,20 @@ export default function Analises() {
         ))}
       </div>
 
-      {/* Filtro de setor */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {setores.map((setor) => (
-          <button
-            key={setor}
-            onClick={() => setSetorFiltro(setor)}
-            className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-colors ${setor === setorFiltro ? "bg-lz-green text-lz-black" : "bg-white text-gray-400 border border-gray-200"}`}
-          >
-            {setor}
-          </button>
-        ))}
-      </div>
+      {/* Filtro de setor — apenas RH alterna; gestor fica travado na própria área */}
+      {ehRh && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {setores.map((setor) => (
+            <button
+              key={setor}
+              onClick={() => setSetorFiltroRh(setor)}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-colors ${setor === setorFiltro ? "bg-lz-green text-lz-black" : "bg-white text-gray-400 border border-gray-200"}`}
+            >
+              {setor}
+            </button>
+          ))}
+        </div>
+      )}
 
       {reembolsosFiltrados.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center">

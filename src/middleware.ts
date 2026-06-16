@@ -1,7 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { emailAutorizado } from "@/lib/acesso";
 
-const DOMINIO_PERMITIDO = "@liquidz.com.br";
+// Encerra a sessão Supabase removendo os cookies de auth da resposta de redirect.
+function bloquear(request: NextRequest, motivo: string) {
+  const redirect = NextResponse.redirect(new URL(`/?erro=${motivo}`, request.url));
+  request.cookies.getAll().forEach((c) => {
+    if (c.name.startsWith("sb-")) redirect.cookies.delete(c.name);
+  });
+  return redirect;
+}
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -32,13 +40,16 @@ export async function middleware(request: NextRequest) {
   const rotaProtegida = request.nextUrl.pathname.startsWith("/rep") ||
                         request.nextUrl.pathname.startsWith("/rh");
 
-  if (rotaProtegida && !user) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  if (rotaProtegida && user && !user.email?.endsWith(DOMINIO_PERMITIDO)) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/?erro=dominio", request.url));
+  if (rotaProtegida) {
+    // Sem sessão → manda pro login
+    if (!user) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    // Com sessão mas fora da lista de autorizados → bloqueia e encerra a sessão.
+    // Vale para qualquer email, inclusive @liquidz.com.br que não esteja cadastrado.
+    if (!emailAutorizado(user.email)) {
+      return bloquear(request, "nao_cadastrado");
+    }
   }
 
   return supabaseResponse;

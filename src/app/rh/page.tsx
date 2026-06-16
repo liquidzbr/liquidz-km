@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { representantes, reembolsos, gestores, getMesesDisponiveis } from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { representantes, reembolsos, getMesesDisponiveis } from "@/lib/mock-data";
 import { calcularSaldo, formatarReais, formatarKm, TARIFA_DEFAULT } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
+import { usePerfil } from "@/lib/use-perfil";
 
 function mesAtual() {
   return new Date().toISOString().slice(0, 7);
@@ -17,6 +19,8 @@ function formatarMes(mesISO: string): string {
 }
 
 export default function RhDashboard() {
+  const router = useRouter();
+  const { perfil, carregando } = usePerfil();
   const { historico, tarifaAtual, getTarifaParaMes, adicionarTarifa, tarifasPorRep, getTarifaRep, setTarifaRep } = useTarifa();
 
   const meses = getMesesDisponiveis();
@@ -26,12 +30,20 @@ export default function RhDashboard() {
   const [inputMes, setInputMes] = useState(mesAtual());
   const [expandedRepId, setExpandedRepId] = useState<string | null>(null);
   const [inputTarifaRep, setInputTarifaRep] = useState("");
-  const [papel, setPapel] = useState<"rh" | string>("rh");
 
-  const gestorAtual = papel !== "rh" ? gestores.find(g => g.id === papel) : null;
+  // Reps não acessam o painel — vão para a própria visão
+  useEffect(() => {
+    if (!carregando && perfil?.papel === "rep") router.replace("/rep");
+  }, [carregando, perfil, router]);
 
-  const repsFiltrados = gestorAtual
-    ? representantes.filter(r => r.setor === gestorAtual.setor)
+  const ehRh = perfil?.papel === "rh";
+  // RH pode filtrar opcionalmente por área; gestor fica travado na própria área
+  const [areaFiltroRh, setAreaFiltroRh] = useState<string | null>(null);
+  const areas = Array.from(new Set(representantes.map((r) => r.setor))).sort();
+  const areaAtiva = ehRh ? areaFiltroRh : (perfil?.area ?? null);
+
+  const repsFiltrados = areaAtiva
+    ? representantes.filter(r => r.setor === areaAtiva)
     : representantes;
 
   const saldos = reembolsos
@@ -46,7 +58,7 @@ export default function RhDashboard() {
   const totalInvestido = saldos.reduce((acc, r) => acc + r.investimentoGasolina, 0);
   const repsComAlerta = saldos.filter((r) => r.saldoReais < 0);
 
-  const titulo = gestorAtual ? `Painel — ${gestorAtual.setor}` : "Painel Geral";
+  const titulo = areaAtiva ? `Painel — ${areaAtiva}` : "Painel Geral";
 
   function salvarTarifa() {
     const valor = parseFloat(inputValor.replace(",", "."));
@@ -68,6 +80,15 @@ export default function RhDashboard() {
 
   const historicoOrdenado = [...historico].sort((a, b) => b.inicio.localeCompare(a.inicio));
 
+  // Aguarda resolver o perfil antes de renderizar (evita flash da visão errada)
+  if (carregando || perfil?.papel === "rep") {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -75,27 +96,29 @@ export default function RhDashboard() {
         <p className="text-gray-500 text-sm">{formatarMes(mesSelecionado)} · {repsFiltrados.length} representantes</p>
       </div>
 
-      {/* Seletor de papel (demo) */}
-      <div className="flex flex-col gap-1">
-        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Visualizando como</p>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setPapel("rh")}
-            className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${papel === "rh" ? "bg-lz-black text-lz-green" : "bg-white text-gray-400 border border-gray-200"}`}
-          >
-            RH — Todos
-          </button>
-          {gestores.map(g => (
+      {/* Filtro de área — apenas RH pode alternar; gestor fica travado na própria área */}
+      {ehRh && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Filtrar por área</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
             <button
-              key={g.id}
-              onClick={() => setPapel(g.id)}
-              className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${papel === g.id ? "bg-lz-black text-lz-green" : "bg-white text-gray-400 border border-gray-200"}`}
+              onClick={() => setAreaFiltroRh(null)}
+              className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${areaFiltroRh === null ? "bg-lz-black text-lz-green" : "bg-white text-gray-400 border border-gray-200"}`}
             >
-              Gestor: {g.setor}
+              Todas
             </button>
-          ))}
+            {areas.map(area => (
+              <button
+                key={area}
+                onClick={() => setAreaFiltroRh(area)}
+                className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${areaFiltroRh === area ? "bg-lz-black text-lz-green" : "bg-white text-gray-400 border border-gray-200"}`}
+              >
+                {area}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filtro de mês */}
       <div className="flex gap-2 overflow-x-auto pb-1">

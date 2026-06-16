@@ -1,13 +1,58 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { infoAcesso } from "@/lib/acesso";
+
+const MENSAGENS_ERRO: Record<string, string> = {
+  nao_cadastrado: "Seu email não tem acesso a esta plataforma.",
+  dominio: "Use uma conta @liquidz.com.br.",
+  auth: "Erro ao autenticar. Tente novamente.",
+  sem_codigo: "Erro ao autenticar. Tente novamente.",
+};
 
 export default function Home() {
-  const [mostraDemo, setMostraDemo] = useState(false);
+  const router = useRouter();
   const [carregando, setCarregando] = useState(false);
+  const [verificando, setVerificando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Verifica se já existe sessão (inclui o caso do ?code= cair aqui).
+  // Autorizados são roteados pelo papel; não autorizados são deslogados.
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function resolverSessao() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        const params = new URLSearchParams(window.location.search);
+        const erroParam = params.get("erro");
+        if (erroParam) setErro(MENSAGENS_ERRO[erroParam] ?? "Não foi possível entrar.");
+        setVerificando(false);
+        return;
+      }
+
+      const info = infoAcesso(user.email);
+      if (!info) {
+        await supabase.auth.signOut();
+        setErro(MENSAGENS_ERRO.nao_cadastrado);
+        setVerificando(false);
+        return;
+      }
+
+      router.replace(info.papel === "rep" ? "/rep" : "/rh");
+    }
+
+    resolverSessao();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") resolverSessao();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   async function entrarComGoogle() {
     setCarregando(true);
@@ -26,6 +71,14 @@ export default function Home() {
       setErro("Erro ao conectar com o Google. Tente novamente.");
       setCarregando(false);
     }
+  }
+
+  if (verificando) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-lz-bg">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+      </main>
+    );
   }
 
   return (
@@ -64,37 +117,6 @@ export default function Home() {
         <p className="text-center text-xs text-gray-400">
           Apenas emails <strong>@liquidz.com.br</strong>
         </p>
-
-        <div className="flex items-center gap-3 my-2">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">desenvolvimento</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
-
-        {!mostraDemo ? (
-          <button
-            onClick={() => setMostraDemo(true)}
-            className="text-center text-xs text-gray-400 underline underline-offset-2"
-          >
-            Acessar em modo demonstração
-          </button>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <p className="text-xs text-center text-gray-400">Escolha o perfil para testar:</p>
-            <Link
-              href="/rep"
-              className="bg-lz-green text-lz-black font-bold text-center py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
-            >
-              Entrar como Representante
-            </Link>
-            <Link
-              href="/rh"
-              className="bg-lz-black text-lz-green font-bold text-center py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
-            >
-              Entrar como RH
-            </Link>
-          </div>
-        )}
       </div>
 
       <p className="mt-10 text-xs text-gray-400">Every drop counts.</p>

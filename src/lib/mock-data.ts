@@ -99,6 +99,11 @@ export const reembolsos: Reembolso[] = [
   { id: "r9", repId: "rep3", mes: "2026-04", investimentoGasolina: 65,  kmRealizados: 72 },
 ];
 
+export function getRepPorEmail(email: string | null | undefined): Representante | undefined {
+  if (!email) return undefined;
+  return representantes.find((r) => r.email.toLowerCase() === email.toLowerCase());
+}
+
 export function getReembolsoAtual(repId: string): Reembolso | undefined {
   return reembolsos.find((r) => r.repId === repId && r.mes === "2026-06");
 }

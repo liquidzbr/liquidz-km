@@ -1,27 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { getReembolsoAtual, getViagensPorRep } from "@/lib/mock-data";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getReembolsoAtual, getViagensPorRep, getRepPorEmail } from "@/lib/mock-data";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
-
-const REP_ID = "rep1";
+import { usePerfil } from "@/lib/use-perfil";
 
 export default function RepDashboard() {
+  const router = useRouter();
+  const { perfil, carregando } = usePerfil();
   const { getTarifaRep } = useTarifa();
-  const reembolso = getReembolsoAtual(REP_ID);
-  const viagens = getViagensPorRep(REP_ID);
-  const tarifa = getTarifaRep(REP_ID, "2026-06");
+
+  // Identifica o rep logado pelo email
+  const rep = getRepPorEmail(perfil?.email);
+
+  // Gestor/RH não têm visão de rep — vão para o painel
+  useEffect(() => {
+    if (!carregando && perfil && perfil.papel !== "rep") router.replace("/rh");
+  }, [carregando, perfil, router]);
+
+  const reembolso = rep ? getReembolsoAtual(rep.id) : undefined;
+  const viagens = rep ? getViagensPorRep(rep.id) : [];
+  const tarifa = rep ? getTarifaRep(rep.id, "2026-06") : 0;
 
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifa)
     : null;
   const sobrou = saldo ? saldo.saldoReais >= 0 : true;
 
+  // Aguarda resolver o perfil; bloqueia render para não-reps
+  if (carregando || !perfil || perfil.papel !== "rep") {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const primeiroNome = rep?.nome.split(" ")[0] ?? "";
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-black text-lz-black">Olá, Felippe!</h1>
+        <h1 className="text-2xl font-black text-lz-black">Olá, {primeiroNome}!</h1>
         <p className="text-gray-500 text-sm">Junho de 2026 · tarifa: {formatarReais(tarifa)}/km</p>
       </div>
 
