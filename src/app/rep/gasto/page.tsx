@@ -111,7 +111,6 @@ export default function RegistrarGasto() {
             <input
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={onFotoChange}
               className="hidden"
             />

@@ -113,7 +113,6 @@ export default function RegistrarEstacionamento() {
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={onFotoChange}
                 className="hidden"
               />

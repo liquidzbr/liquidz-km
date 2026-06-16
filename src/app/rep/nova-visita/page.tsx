@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatarKm, formatarReais } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
+import { usePerfil } from "@/lib/use-perfil";
+import { fetchMeuRep, criarViagem } from "@/lib/dados";
 
 type Coordenada = { lat: number; lon: number };
 type Etapa = "idle" | "solicitando-gps" | "em-andamento" | "calculando" | "confirmar";
@@ -21,7 +23,9 @@ async function geocodificar(lat: number, lon: number): Promise<string | null> {
 
 export default function NovaVisita() {
   const router = useRouter();
+  const { perfil } = usePerfil();
   const { tarifaAtual: tarifa } = useTarifa();
+  const [repId, setRepId] = useState<string | null>(null);
   const [etapa, setEtapa] = useState<Etapa>("idle");
   const [inicio, setInicio] = useState<Coordenada | null>(null);
   const [cliente, setCliente] = useState("");
@@ -29,7 +33,13 @@ export default function NovaVisita() {
   const [enderecoSaida, setEnderecoSaida] = useState("");
   const [enderecoChegada, setEnderecoChegada] = useState("");
   const [buscandoEndereco, setBuscandoEndereco] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Identifica o rep logado para gravar a viagem em nome dele
+  useEffect(() => {
+    if (perfil?.papel === "rep") fetchMeuRep(perfil.email).then((r) => setRepId(r?.id ?? null));
+  }, [perfil]);
 
   function obterGPS(): Promise<Coordenada> {
     return new Promise((resolve, reject) => {
@@ -102,8 +112,27 @@ export default function NovaVisita() {
     }
   }
 
-  function confirmarVisita() {
-    router.push("/rep");
+  async function confirmarVisita() {
+    if (kmCalculado === null) return;
+    if (!repId) {
+      setErro("Não foi possível identificar seu cadastro. Recarregue e tente de novo.");
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    try {
+      await criarViagem(repId, {
+        cliente: cliente.trim(),
+        kmRodados: kmCalculado,
+        valorKm: tarifa,
+        enderecoSaida: enderecoSaida || undefined,
+        enderecoChegada: enderecoChegada || undefined,
+      });
+      router.push("/rep");
+    } catch {
+      setErro("Não foi possível salvar a viagem. Tente novamente.");
+      setSalvando(false);
+    }
   }
 
   return (
@@ -211,8 +240,12 @@ export default function NovaVisita() {
               </div>
             </div>
           </div>
-          <button onClick={confirmarVisita} className="bg-lz-green text-lz-black font-bold py-4 rounded-full text-lg">
-            Confirmar e salvar
+          <button
+            onClick={confirmarVisita}
+            disabled={salvando}
+            className="bg-lz-green text-lz-black font-bold py-4 rounded-full text-lg disabled:opacity-40"
+          >
+            {salvando ? "Salvando..." : "Confirmar e salvar"}
           </button>
         </div>
       )}
