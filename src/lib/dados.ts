@@ -166,3 +166,25 @@ export async function criarEstacionamento(repId: string, local: string, valor: n
   const { error } = await supabase.from("estacionamentos").insert({ rep_id: repId, local, valor, foto_url });
   if (error) throw error;
 }
+
+export async function criarViagem(
+  repId: string,
+  dados: {
+    cliente: string;
+    kmRodados: number;
+    valorKm: number;
+    enderecoSaida?: string;
+    enderecoChegada?: string;
+  },
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("viagens").insert({
+    rep_id: repId,
+    cliente: dados.cliente,
+    km_rodados: dados.kmRodados,
+    valor_km: dados.valorKm,
+    endereco_saida: dados.enderecoSaida ?? null,
+    endereco_chegada: dados.enderecoChegada ?? null,
+  });
+  if (error) throw error;
+}
