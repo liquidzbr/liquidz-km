@@ -113,15 +113,33 @@ export default function RepDashboard() {
             <p className="text-gray-400 text-sm">Nenhuma viagem registrada ainda.</p>
           )}
           {viagens.map((v) => (
-            <div key={v.id} className="bg-white rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm text-lz-black">{v.cliente}</p>
-                <p className="text-xs text-gray-400">{formatarData(v.data)}</p>
+            <div key={v.id} className="bg-white rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-sm text-lz-black">{v.cliente}</p>
+                  <p className="text-xs text-gray-400">{formatarData(v.data)}</p>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <p className="font-bold text-sm text-lz-black">{formatarKm(v.kmRodados)}</p>
+                  <p className="text-xs text-lz-green font-semibold">{formatarReais(v.kmRodados * tarifa)}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-sm text-lz-black">{formatarKm(v.kmRodados)}</p>
-                <p className="text-xs text-lz-green font-semibold">{formatarReais(v.kmRodados * tarifa)}</p>
-              </div>
+              {(v.enderecoSaida || v.enderecoChegada) && (
+                <div className="flex flex-col gap-1 border-t border-gray-50 pt-2">
+                  {v.enderecoSaida && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-gray-400 shrink-0 w-12">Saída</span>
+                      <span className="text-xs text-lz-black">{v.enderecoSaida}</span>
+                    </div>
+                  )}
+                  {v.enderecoChegada && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-gray-400 shrink-0 w-12">Chegada</span>
+                      <span className="text-xs text-lz-black">{v.enderecoChegada}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
