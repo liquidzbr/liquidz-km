@@ -128,6 +128,13 @@ create policy "inserir viagens"
   to public
   with check (rep_id in (select representantes.id from representantes));
 
+drop policy if exists "apagar viagens" on public.viagens;
+create policy "apagar viagens"
+  on public.viagens
+  for delete
+  to public
+  using (rep_id in (select representantes.id from representantes));
+
 drop policy if exists "ver gastos" on public.gastos;
 create policy "ver gastos"
   on public.gastos

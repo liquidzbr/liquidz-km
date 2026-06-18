@@ -195,3 +195,11 @@ export async function criarViagem(
   });
   if (error) throw error;
 }
+
+// Apaga uma viagem. Depende da policy de DELETE no banco (RLS) — sem ela o
+// banco recusa silenciosamente. A RLS restringe a quem o usuário pode ver.
+export async function deletarViagem(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("viagens").delete().eq("id", id);
+  if (error) throw error;
+}

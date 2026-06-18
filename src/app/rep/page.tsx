@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Representante, Reembolso, Viagem } from "@/lib/dados";
-import { fetchRepresentantes, fetchReembolsos, fetchViagens } from "@/lib/dados";
+import { fetchRepresentantes, fetchReembolsos, fetchViagens, deletarViagem } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
@@ -20,6 +20,24 @@ export default function RepDashboard() {
   const [reembolso, setReembolso] = useState<Reembolso | undefined>(undefined);
   const [viagens, setViagens] = useState<Viagem[]>([]);
   const [carregandoDados, setCarregandoDados] = useState(true);
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+  const [apagandoId, setApagandoId] = useState<string | null>(null);
+  const [erroApagar, setErroApagar] = useState<string | null>(null);
+
+  async function deletar(id: string) {
+    setApagandoId(id);
+    setErroApagar(null);
+    try {
+      await deletarViagem(id);
+      setViagens((prev) => prev.filter((x) => x.id !== id));
+      setConfirmandoId(null);
+    } catch (e) {
+      console.error("Falha ao apagar viagem:", e);
+      setErroApagar("Não foi possível apagar a viagem. Tente novamente.");
+    } finally {
+      setApagandoId(null);
+    }
+  }
 
   // Gestor/RH não têm visão de rep — vão para o painel
   useEffect(() => {
@@ -108,22 +126,54 @@ export default function RepDashboard() {
 
       <div>
         <h2 className="text-base font-bold text-lz-black mb-3">Viagens recentes</h2>
+        {erroApagar && (
+          <div className="bg-red-50 border border-lz-red rounded-xl p-3 text-sm text-lz-red mb-2">{erroApagar}</div>
+        )}
         <div className="flex flex-col gap-2">
           {viagens.length === 0 && (
             <p className="text-gray-400 text-sm">Nenhuma viagem registrada ainda.</p>
           )}
           {viagens.map((v) => (
             <div key={v.id} className="bg-white rounded-xl p-4 flex flex-col gap-3">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-sm text-lz-black">{v.cliente}</p>
                   <p className="text-xs text-gray-400">{formatarData(v.data)}</p>
                 </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="font-bold text-sm text-lz-black">{formatarKm(v.kmRodados)}</p>
-                  <p className="text-xs text-lz-green font-semibold">{formatarReais(v.kmRodados * tarifa)}</p>
+                <div className="flex items-start gap-3 shrink-0">
+                  <div className="text-right">
+                    <p className="font-bold text-sm text-lz-black">{formatarKm(v.kmRodados)}</p>
+                    <p className="text-xs text-lz-green font-semibold">{formatarReais(v.kmRodados * tarifa)}</p>
+                  </div>
+                  <button
+                    onClick={() => setConfirmandoId(confirmandoId === v.id ? null : v.id)}
+                    aria-label="Apagar viagem"
+                    className="text-gray-300 hover:text-lz-red text-lg leading-none -mt-0.5"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
+              {confirmandoId === v.id && (
+                <div className="flex items-center justify-between gap-2 border-t border-gray-50 pt-3">
+                  <span className="text-xs text-gray-500">Apagar esta viagem?</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmandoId(null)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 text-gray-500"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => deletar(v.id)}
+                      disabled={apagandoId === v.id}
+                      className="text-xs font-bold px-3 py-1.5 rounded-full bg-lz-red text-white disabled:opacity-50"
+                    >
+                      {apagandoId === v.id ? "Apagando..." : "Apagar"}
+                    </button>
+                  </div>
+                </div>
+              )}
               {(v.enderecoSaida || v.enderecoChegada) && (
                 <div className="flex flex-col gap-1 border-t border-gray-50 pt-2">
                   {v.enderecoSaida && (
