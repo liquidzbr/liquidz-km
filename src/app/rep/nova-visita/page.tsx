@@ -154,14 +154,21 @@ export default function NovaVisita() {
       router.push("/rep");
     } catch (e: unknown) {
       // Não engolir o erro: logar o real e traduzir pra uma mensagem útil.
+      // O Supabase lança um objeto { code, message, details, hint }, não um Error —
+      // por isso extraímos os campos em vez de fazer String(e) ([object Object]).
       console.error("Falha ao salvar viagem:", e);
-      const msg = e instanceof Error ? e.message : String(e);
+      const err = (e ?? {}) as { message?: string; code?: string; details?: string; hint?: string };
+      const msg = err.message || (e instanceof Error ? e.message : String(e));
+      const code = err.code || "";
+      const alvo = `${code} ${msg}`;
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         setErro("Sem conexão agora. A viagem continua aqui — reconecte e toque em salvar de novo.");
-      } else if (/jwt|sess|expired|row-level security|42501|not authenticated/i.test(msg)) {
+      } else if (/jwt|sess|expired|not authenticated/i.test(alvo)) {
         setErro("Sua sessão expirou. Faça login de novo — os dados aqui continuam, é só confirmar de novo.");
+      } else if (/42501|row-level security/i.test(alvo)) {
+        setErro("O banco recusou a gravação (permissão/cadastro). Avise o suporte com este código: 42501.");
       } else {
-        setErro(`Não foi possível salvar a viagem. (${msg})`);
+        setErro(`Não foi possível salvar a viagem. [${code || "erro"}] ${msg}`);
       }
       setSalvando(false);
     }

@@ -178,8 +178,13 @@ export async function criarViagem(
   },
 ): Promise<void> {
   const supabase = createClient();
+  // `data` é NOT NULL na tabela viagens e não tem default — sem isto o insert
+  // falha (era a causa do "não foi possível salvar a viagem"). Data do dia (YYYY-MM-DD),
+  // formato válido tanto para coluna date quanto timestamptz.
+  const hoje = new Date().toISOString().slice(0, 10);
   const { error } = await supabase.from("viagens").insert({
     rep_id: repId,
+    data: hoje,
     cliente: dados.cliente,
     km_rodados: dados.kmRodados,
     valor_km: dados.valorKm,
