@@ -11,6 +11,7 @@ export type AcessoInfo = {
 
 export const EMAILS_AUTORIZADOS: Record<string, AcessoInfo> = {
   "rh@liquidz.com.br":             { nome: "RH",               papel: "rh",     area: null },
+  "thomas.tobler@liquidz.com.br":  { nome: "Thomas Tobler",    papel: "rh",     area: null },
   "denis.pauli@liquidz.com.br":    { nome: "Denis Hesz Pauli", papel: "gestor", area: "Comercial" },
   "gabriela.cunha@liquidz.com.br": { nome: "Gabriela Cunha",   papel: "gestor", area: "Saúde" },
   "felippe.vidal@liquidz.com.br":  { nome: "Felippe Vidal",    papel: "rep",    area: "Comercial" },
