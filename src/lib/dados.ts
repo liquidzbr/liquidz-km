@@ -28,6 +28,15 @@ export type Viagem = {
   enderecoChegada?: string;
 };
 
+// Cada lançamento de gasolina do mês (valor + data). A soma dos lançamentos do
+// mês forma o investimento que alimenta o saldo (reembolsos.investimento_gasolina).
+export type Gasto = {
+  id: string;
+  repId: string;
+  data: string;
+  valor: number;
+};
+
 // Todas as queries dependem da RLS: o banco já devolve só o que o usuário pode ver.
 
 export async function fetchRepresentantes(): Promise<Representante[]> {
@@ -154,4 +163,42 @@ export async function salvarInvestimentoGasolina(repId: string, mes: string, val
     });
     if (error) throw error;
   }
+}
+
+// Lista os lançamentos de gasolina do rep. Se `mesPrefix` (ex: "2026-06") for
+// passado, devolve só os daquele mês. Mais recentes primeiro.
+export async function fetchGastos(repId: string, mesPrefix?: string): Promise<Gasto[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("gastos")
+    .select("id, rep_id, data, valor")
+    .eq("rep_id", repId)
+    .order("data", { ascending: false });
+  if (error) throw error;
+  let rows = (data ?? []).map((g) => ({
+    id: g.id as string,
+    repId: g.rep_id as string,
+    data: g.data as string,
+    valor: Number(g.valor),
+  }));
+  if (mesPrefix) rows = rows.filter((g) => String(g.data).startsWith(mesPrefix));
+  return rows;
+}
+
+// Adiciona um lançamento de gasolina (valor + data) e ressincroniza o total do
+// mês em reembolsos.investimento_gasolina — a soma dos lançamentos é a base do saldo.
+export async function adicionarGastoGasolina(repId: string, valor: number, data: string, mes: string): Promise<void> {
+  const supabase = createClient();
+  // comprovante_url fica null: o comprovante deixou de ser exigido.
+  const { error } = await supabase.from("gastos").insert({
+    id: crypto.randomUUID(),
+    rep_id: repId,
+    data,
+    valor,
+    comprovante_url: null,
+  });
+  if (error) throw error;
+  const gastosDoMes = await fetchGastos(repId, mes);
+  const total = gastosDoMes.reduce((acc, g) => acc + g.valor, 0);
+  await salvarInvestimentoGasolina(repId, mes, total);
 }
