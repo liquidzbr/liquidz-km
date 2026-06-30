@@ -114,6 +114,24 @@ create policy "ver reembolsos"
   to public
   using (rep_id in (select representantes.id from representantes));
 
+-- O rep informa o "valor investido em gasolina" do mês pelo app, e isso grava
+-- aqui (investimento_gasolina) — base do cálculo de saldo. Precisa de INSERT
+-- (primeira vez no mês) e UPDATE (ajustes). Restrito aos reps que o usuário vê.
+drop policy if exists "inserir reembolsos" on public.reembolsos;
+create policy "inserir reembolsos"
+  on public.reembolsos
+  for insert
+  to public
+  with check (rep_id in (select representantes.id from representantes));
+
+drop policy if exists "atualizar reembolsos" on public.reembolsos;
+create policy "atualizar reembolsos"
+  on public.reembolsos
+  for update
+  to public
+  using (rep_id in (select representantes.id from representantes))
+  with check (rep_id in (select representantes.id from representantes));
+
 drop policy if exists "ver viagens" on public.viagens;
 create policy "ver viagens"
   on public.viagens

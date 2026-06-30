@@ -108,6 +108,12 @@ export default function RepDashboard() {
         >
           + Nova visita
         </Link>
+        <Link
+          href="/rep/gasto"
+          className="bg-white border-2 border-lz-black text-lz-black font-bold py-3 rounded-2xl text-center text-sm"
+        >
+          ⛽ Valor investido em gasolina
+        </Link>
       </div>
 
       <div>

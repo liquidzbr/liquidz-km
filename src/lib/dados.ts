@@ -121,3 +121,37 @@ export async function deletarViagem(id: string): Promise<void> {
   const { error } = await supabase.from("viagens").delete().eq("id", id);
   if (error) throw error;
 }
+
+// Define quanto o rep investiu em gasolina no mês. Esse valor alimenta o
+// cálculo de saldo (calcularSaldo) no painel do rep e na visão do RH.
+// Há no máximo uma linha de reembolso por rep+mês: atualiza se existir, cria se não.
+// Depende das policies de INSERT/UPDATE em reembolsos (RLS) — sem elas o banco
+// recusa silenciosamente, igual ao caso do delete de viagens.
+export async function salvarInvestimentoGasolina(repId: string, mes: string, valor: number): Promise<void> {
+  const supabase = createClient();
+  const { data: existente, error: errBusca } = await supabase
+    .from("reembolsos")
+    .select("id")
+    .eq("rep_id", repId)
+    .eq("mes", mes)
+    .maybeSingle();
+  if (errBusca) throw errBusca;
+
+  if (existente) {
+    const { error } = await supabase
+      .from("reembolsos")
+      .update({ investimento_gasolina: valor })
+      .eq("id", existente.id);
+    if (error) throw error;
+  } else {
+    // id gerado aqui pelo mesmo motivo da viagem: a tabela pode não ter default.
+    const { error } = await supabase.from("reembolsos").insert({
+      id: crypto.randomUUID(),
+      rep_id: repId,
+      mes,
+      investimento_gasolina: valor,
+      km_realizados: 0,
+    });
+    if (error) throw error;
+  }
+}
