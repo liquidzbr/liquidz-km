@@ -108,20 +108,6 @@ export default function RepDashboard() {
         >
           + Nova visita
         </Link>
-        <div className="flex gap-2">
-          <Link
-            href="/rep/gasto"
-            className="flex-1 bg-white border-2 border-lz-black text-lz-black font-bold py-3 rounded-2xl text-center text-sm"
-          >
-            ⛽ Gasolina
-          </Link>
-          <Link
-            href="/rep/estacionamento"
-            className="flex-1 bg-white border-2 border-lz-black text-lz-black font-bold py-3 rounded-2xl text-center text-sm"
-          >
-            🅿️ Estacionamento
-          </Link>
-        </div>
       </div>
 
       <div>

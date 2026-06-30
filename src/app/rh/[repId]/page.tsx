@@ -4,34 +4,12 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  fetchRepresentantes, fetchReembolsos, fetchViagens, fetchGastos, fetchEstacionamentos,
-  urlComprovante,
-  type Representante, type Reembolso, type Viagem, type Gasto, type Estacionamento,
+  fetchRepresentantes, fetchReembolsos, fetchViagens,
+  type Representante, type Reembolso, type Viagem,
 } from "@/lib/dados";
 import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
-
-// Abre o comprovante (arquivo privado) via URL assinada temporária
-function ComprovanteLink({ path }: { path: string | null }) {
-  const [abrindo, setAbrindo] = useState(false);
-  if (!path) return <span className="text-xs text-gray-300">sem foto</span>;
-  async function abrir() {
-    setAbrindo(true);
-    const url = await urlComprovante(path!);
-    setAbrindo(false);
-    if (url) window.open(url, "_blank");
-  }
-  return (
-    <button
-      onClick={abrir}
-      disabled={abrindo}
-      className="text-xs font-semibold text-lz-black underline underline-offset-2 disabled:opacity-50"
-    >
-      {abrindo ? "abrindo…" : "📎 ver"}
-    </button>
-  );
-}
 
 export default function RepDetalhe({ params }: { params: Promise<{ repId: string }> }) {
   const { repId } = use(params);
@@ -42,8 +20,6 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
   const [rep, setRep] = useState<Representante | null>(null);
   const [reembolso, setReembolso] = useState<Reembolso | undefined>(undefined);
   const [viagens, setViagens] = useState<Viagem[]>([]);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [estacionamentos, setEstacionamentos] = useState<Estacionamento[]>([]);
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
 
@@ -62,17 +38,13 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
       if (!ativo) return;
       if (!alvo) { setSemAcesso(true); setCarregandoDados(false); return; }
       setRep(alvo);
-      const [rmb, vgs, gst, est] = await Promise.all([
+      const [rmb, vgs] = await Promise.all([
         fetchReembolsos(),
         fetchViagens(repId),
-        fetchGastos(repId),
-        fetchEstacionamentos(repId),
       ]);
       if (!ativo) return;
       setReembolso(rmb.find((r) => r.repId === repId));
       setViagens(vgs);
-      setGastos(gst);
-      setEstacionamentos(est);
       setCarregandoDados(false);
     })();
     return () => { ativo = false; };
@@ -131,44 +103,6 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
           </div>
         </div>
       )}
-
-      {/* Comprovantes de gasolina */}
-      <div>
-        <h2 className="text-base font-bold text-lz-black mb-3">Gastos de gasolina ({gastos.length})</h2>
-        <div className="flex flex-col gap-2">
-          {gastos.length === 0 && (
-            <p className="text-gray-400 text-sm">Nenhum gasto com comprovante.</p>
-          )}
-          {gastos.map((g) => (
-            <div key={g.id} className="bg-white rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm text-lz-black">{formatarReais(g.valor)}</p>
-                <p className="text-xs text-gray-400">{formatarData(g.data)}</p>
-              </div>
-              <ComprovanteLink path={g.comprovanteUrl} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Comprovantes de estacionamento */}
-      <div>
-        <h2 className="text-base font-bold text-lz-black mb-3">Estacionamento ({estacionamentos.length})</h2>
-        <div className="flex flex-col gap-2">
-          {estacionamentos.length === 0 && (
-            <p className="text-gray-400 text-sm">Nenhum estacionamento registrado.</p>
-          )}
-          {estacionamentos.map((e) => (
-            <div key={e.id} className="bg-white rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm text-lz-black">{e.local}</p>
-                <p className="text-xs text-gray-400">{formatarData(e.data)} · {formatarReais(e.valor)}</p>
-              </div>
-              <ComprovanteLink path={e.fotoUrl} />
-            </div>
-          ))}
-        </div>
-      </div>
 
       <div>
         <h2 className="text-base font-bold text-lz-black mb-3">
