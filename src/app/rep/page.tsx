@@ -5,11 +5,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Representante, Reembolso, Viagem } from "@/lib/dados";
 import { fetchRepresentantes, fetchReembolsos, fetchViagens, deletarViagem } from "@/lib/dados";
-import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
+import { calcularSaldo, formatarReais, formatarKm, formatarData, mesAtual, formatarMesExtenso, nomeDoMes } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
-
-const MES_ATUAL = "2026-06";
 
 export default function RepDashboard() {
   const router = useRouter();
@@ -53,14 +51,14 @@ export default function RepDashboard() {
       const meuRep = reps.find((r) => r.email === perfil.email) ?? reps[0] ?? null;
       if (!ativo) return;
       setRep(meuRep);
-      setReembolso(reembolsos.find((r) => r.repId === meuRep?.id && r.mes === MES_ATUAL));
+      setReembolso(reembolsos.find((r) => r.repId === meuRep?.id && r.mes === mesAtual()));
       if (meuRep) setViagens(await fetchViagens(meuRep.id));
       if (ativo) setCarregandoDados(false);
     })();
     return () => { ativo = false; };
   }, [carregando, perfil]);
 
-  const tarifa = rep ? getTarifaRep(rep.id, MES_ATUAL) : 0;
+  const tarifa = rep ? getTarifaRep(rep.id, mesAtual()) : 0;
 
   const saldo = reembolso
     ? calcularSaldo(reembolso.investimentoGasolina, reembolso.kmRealizados, tarifa)
@@ -82,7 +80,7 @@ export default function RepDashboard() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-black text-lz-black">Olá, {primeiroNome}!</h1>
-        <p className="text-gray-500 text-sm">Junho de 2026 · tarifa: {formatarReais(tarifa)}/km</p>
+        <p className="text-gray-500 text-sm">{formatarMesExtenso(mesAtual())} · tarifa: {formatarReais(tarifa)}/km</p>
       </div>
 
       {saldo && (
@@ -98,6 +96,19 @@ export default function RepDashboard() {
             <span>KM rodados: <strong>{formatarKm(reembolso!.kmRealizados)}</strong></span>
             <span>KM cobertos: <strong>{formatarKm(saldo.kmCobertos)}</strong></span>
           </div>
+        </div>
+      )}
+
+      {/* Todo dia 1º ainda não existe linha de reembolso do mês — ela nasce no
+          primeiro abastecimento lançado. Sem este bloco o card de saldo apenas
+          sumiria da tela, o que parece bug para o rep. */}
+      {!saldo && (
+        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-5">
+          <p className="text-sm font-semibold text-lz-black mb-1">Saldo do mês</p>
+          <p className="text-sm text-gray-500">
+            Nenhum abastecimento lançado em {nomeDoMes(mesAtual())} ainda. Assim que você
+            registrar o primeiro, o saldo aparece aqui.
+          </p>
         </div>
       )}
 

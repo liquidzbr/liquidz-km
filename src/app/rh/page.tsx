@@ -5,13 +5,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Representante, Reembolso } from "@/lib/dados";
 import { fetchRepresentantes, fetchReembolsos } from "@/lib/dados";
-import { calcularSaldo, formatarReais, formatarKm, TARIFA_DEFAULT } from "@/lib/utils";
+import { calcularSaldo, formatarReais, formatarKm, TARIFA_DEFAULT, mesAtual } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
-
-function mesAtual() {
-  return new Date().toISOString().slice(0, 7);
-}
 
 function formatarMes(mesISO: string): string {
   const [ano, mes] = mesISO.split("-");

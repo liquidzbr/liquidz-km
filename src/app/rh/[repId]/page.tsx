@@ -7,7 +7,7 @@ import {
   fetchRepresentantes, fetchReembolsos, fetchViagens,
   type Representante, type Reembolso, type Viagem,
 } from "@/lib/dados";
-import { calcularSaldo, formatarReais, formatarKm, formatarData } from "@/lib/utils";
+import { calcularSaldo, formatarReais, formatarKm, formatarData, mesAtual, formatarMesExtenso, nomeDoMes } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
 
@@ -43,7 +43,7 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
         fetchViagens(repId),
       ]);
       if (!ativo) return;
-      setReembolso(rmb.find((r) => r.repId === repId));
+      setReembolso(rmb.find((r) => r.repId === repId && r.mes === mesAtual()));
       setViagens(vgs);
       setCarregandoDados(false);
     })();
@@ -82,7 +82,7 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
 
       {saldo && reembolso && (
         <div className={`rounded-2xl p-5 ${positivo ? "bg-lz-green" : "bg-lz-red"}`}>
-          <p className="text-xs font-semibold text-black/60 uppercase tracking-wider mb-1">Saldo — Junho 2026</p>
+          <p className="text-xs font-semibold text-black/60 uppercase tracking-wider mb-1">Saldo — {formatarMesExtenso(mesAtual())}</p>
           <p className={`text-4xl font-black ${positivo ? "text-lz-black" : "text-white"}`}>
             {formatarReais(saldo.saldoReais)}
           </p>
@@ -101,6 +101,18 @@ export default function RepDetalhe({ params }: { params: Promise<{ repId: string
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Mesmo caso do painel do rep: no início do mês ainda não há linha de
+          reembolso, e sem isto o RH veria a ficha sem nenhum saldo nem explicação. */}
+      {!(saldo && reembolso) && (
+        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-5">
+          <p className="text-xs font-semibold text-black/60 uppercase tracking-wider mb-1">Saldo — {formatarMesExtenso(mesAtual())}</p>
+          <p className="text-sm text-gray-500">
+            Sem lançamento de gasolina em {nomeDoMes(mesAtual())}. O saldo é calculado a
+            partir do primeiro abastecimento registrado pelo rep.
+          </p>
         </div>
       )}
 

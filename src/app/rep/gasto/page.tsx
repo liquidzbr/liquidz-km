@@ -2,13 +2,10 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { calcularKmCobertos, formatarReais, formatarKm, formatarData } from "@/lib/utils";
+import { calcularKmCobertos, formatarReais, formatarKm, formatarData, hojeISO, mesAtual, nomeDoMes } from "@/lib/utils";
 import { useTarifa } from "@/lib/tarifa-context";
 import { usePerfil } from "@/lib/use-perfil";
 import { fetchMeuRep, fetchGastos, adicionarGastoGasolina, type Gasto } from "@/lib/dados";
-
-const MES_ATUAL = "2026-06";
-const hojeISO = () => new Date().toISOString().slice(0, 10);
 
 export default function GasolinaDoMes() {
   const { perfil } = usePerfil();
@@ -29,7 +26,7 @@ export default function GasolinaDoMes() {
       const meuRep = await fetchMeuRep(perfil.email);
       if (!ativo) return;
       setRepId(meuRep?.id ?? null);
-      if (meuRep) setGastos(await fetchGastos(meuRep.id, MES_ATUAL));
+      if (meuRep) setGastos(await fetchGastos(meuRep.id, mesAtual()));
       if (ativo) setCarregando(false);
     })();
     return () => { ativo = false; };
@@ -45,8 +42,8 @@ export default function GasolinaDoMes() {
     setSalvando(true);
     setErro(null);
     try {
-      await adicionarGastoGasolina(repId, valorNum, data, MES_ATUAL);
-      setGastos(await fetchGastos(repId, MES_ATUAL));
+      await adicionarGastoGasolina(repId, valorNum, data);
+      setGastos(await fetchGastos(repId, mesAtual()));
       setValor("");
       setData(hojeISO());
     } catch {
@@ -72,7 +69,7 @@ export default function GasolinaDoMes() {
 
       <div>
         <h1 className="text-2xl font-black text-lz-black">Gasolina do mês</h1>
-        <p className="text-gray-500 text-sm">Adicione cada abastecimento — o app soma o total de junho</p>
+        <p className="text-gray-500 text-sm">Adicione cada abastecimento — o app soma o total de {nomeDoMes(mesAtual())}</p>
       </div>
 
       {/* Total acumulado do mês */}
@@ -125,7 +122,7 @@ export default function GasolinaDoMes() {
 
       {/* Lançamentos do mês */}
       <div>
-        <h2 className="text-base font-bold text-lz-black mb-3">Lançamentos de junho ({gastos.length})</h2>
+        <h2 className="text-base font-bold text-lz-black mb-3">Lançamentos de {nomeDoMes(mesAtual())} ({gastos.length})</h2>
         <div className="flex flex-col gap-2">
           {gastos.length === 0 && (
             <p className="text-gray-400 text-sm">Nenhum abastecimento lançado ainda.</p>

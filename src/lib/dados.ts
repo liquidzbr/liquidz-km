@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { hojeISO } from "@/lib/utils";
 
 export type Representante = {
   id: string;
@@ -109,7 +110,7 @@ export async function criarViagem(
   // não os gera sozinho — então preenchemos os dois aqui (era a causa do
   // "não foi possível salvar a viagem"). id: UUID v4; data: dia de hoje (YYYY-MM-DD),
   // formato válido tanto para coluna date quanto timestamptz.
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISO();
   const { error } = await supabase.from("viagens").insert({
     id: crypto.randomUUID(),
     rep_id: repId,
@@ -187,8 +188,13 @@ export async function fetchGastos(repId: string, mesPrefix?: string): Promise<Ga
 
 // Adiciona um lançamento de gasolina (valor + data) e ressincroniza o total do
 // mês em reembolsos.investimento_gasolina — a soma dos lançamentos é a base do saldo.
-export async function adicionarGastoGasolina(repId: string, valor: number, data: string, mes: string): Promise<void> {
+//
+// O mês é derivado da DATA do abastecimento, não do mês corrente: o rep pode
+// lançar no dia 02/09 um abastecimento do dia 30/08, e esse valor tem que somar
+// em agosto. Antes o mês vinha de fora e o total ia parar no mês errado.
+export async function adicionarGastoGasolina(repId: string, valor: number, data: string): Promise<void> {
   const supabase = createClient();
+  const mes = data.slice(0, 7);
   // comprovante_url fica null: o comprovante deixou de ser exigido.
   const { error } = await supabase.from("gastos").insert({
     id: crypto.randomUUID(),

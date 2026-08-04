@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { TARIFA_DEFAULT } from "./utils";
+import { TARIFA_DEFAULT, mesAtual } from "./utils";
 
 export type TarifaVigencia = {
   valor: number;
@@ -68,7 +68,7 @@ export function TarifaProvider({ children }: { children: React.ReactNode }) {
 
   function getTarifaRep(repId: string, mes?: string): number {
     if (tarifasPorRep[repId] !== undefined) return tarifasPorRep[repId];
-    return mes ? getTarifaParaMes(mes) : getTarifaParaMes(new Date().toISOString().slice(0, 7));
+    return mes ? getTarifaParaMes(mes) : getTarifaParaMes(mesAtual());
   }
 
   function setTarifaRep(repId: string, valor: number) {
@@ -77,7 +77,7 @@ export function TarifaProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("liquidz_tarifa_por_rep", JSON.stringify(updated));
   }
 
-  const tarifaAtual = getTarifaParaMes(new Date().toISOString().slice(0, 7));
+  const tarifaAtual = getTarifaParaMes(mesAtual());
 
   return (
     <TarifaContext.Provider value={{ historico, tarifaAtual, getTarifaParaMes, adicionarTarifa, tarifasPorRep, getTarifaRep, setTarifaRep }}>
