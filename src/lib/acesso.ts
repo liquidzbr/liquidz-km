@@ -17,6 +17,8 @@ export const EMAILS_AUTORIZADOS: Record<string, AcessoInfo> = {
   "felippe.vidal@liquidz.com.br":  { nome: "Felippe Vidal",    papel: "rep",    area: "Comercial" },
   "julia.arantes@liquidz.com.br":  { nome: "Julia Arantes",    papel: "rep",    area: "Comercial" },
   "julia.urban@liquidz.com.br":    { nome: "Julia Urban",      papel: "rep",    area: "Comercial" },
+  "lucio.dias@liquidz.com.br":     { nome: "Lucio Dias",       papel: "rep",    area: "Comercial" },
+  "mariana.brito@liquidz.com.br":  { nome: "Mariana Brito",    papel: "rep",    area: "Comercial" },
   "maycon.brito@liquidz.com.br":   { nome: "Maycon Brito",     papel: "rep",    area: "Comercial" },
   "renata.mayer@liquidz.com.br":   { nome: "Renata Mayer",     papel: "rep",    area: "Saúde" },
   "james.sancho@liquidz.com.br":   { nome: "James Sancho",     papel: "rep",    area: "RH" },
