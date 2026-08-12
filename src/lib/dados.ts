@@ -89,10 +89,12 @@ export async function fetchViagens(repId?: string): Promise<Viagem[]> {
 }
 
 // Acha o representante correspondente ao email logado (RLS já restringe ao próprio).
+// Devolve null quando não há cadastro para o email — nunca cair no primeiro da
+// lista: gravaria a viagem em nome de outra pessoa se o cadastro não existisse.
 export async function fetchMeuRep(email: string | null | undefined): Promise<Representante | null> {
+  if (!email) return null;
   const reps = await fetchRepresentantes();
-  if (!email) return reps[0] ?? null;
-  return reps.find((r) => r.email.toLowerCase() === email.toLowerCase()) ?? reps[0] ?? null;
+  return reps.find((r) => r.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
 export async function criarViagem(

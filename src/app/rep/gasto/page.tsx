@@ -8,7 +8,7 @@ import { usePerfil } from "@/lib/use-perfil";
 import { fetchMeuRep, fetchGastos, adicionarGastoGasolina, type Gasto } from "@/lib/dados";
 
 export default function GasolinaDoMes() {
-  const { perfil } = usePerfil();
+  const { perfil, carregando: carregandoPerfil } = usePerfil();
   const { tarifaAtual: tarifa } = useTarifa();
   const [repId, setRepId] = useState<string | null>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -20,17 +20,29 @@ export default function GasolinaDoMes() {
 
   // Identifica o rep e carrega os lançamentos do mês
   useEffect(() => {
-    if (perfil?.papel !== "rep") return;
+    if (carregandoPerfil) return;
+    if (perfil?.papel !== "rep") {
+      // Sem isso o spinner ficava girando pra sempre para RH/gestor.
+      setCarregando(false);
+      return;
+    }
     let ativo = true;
     (async () => {
-      const meuRep = await fetchMeuRep(perfil.email);
-      if (!ativo) return;
-      setRepId(meuRep?.id ?? null);
-      if (meuRep) setGastos(await fetchGastos(meuRep.id, mesAtual()));
-      if (ativo) setCarregando(false);
+      try {
+        const meuRep = await fetchMeuRep(perfil.email);
+        if (!ativo) return;
+        setRepId(meuRep?.id ?? null);
+        if (meuRep) setGastos(await fetchGastos(meuRep.id, mesAtual()));
+      } catch (e: unknown) {
+        // Antes o erro virava uma promise rejeitada sem dono: o spinner
+        // girava pra sempre e ninguém sabia o motivo.
+        console.error("Falha ao carregar gasolina do mês:", e);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
     })();
     return () => { ativo = false; };
-  }, [perfil]);
+  }, [perfil, carregandoPerfil]);
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
   const total = gastos.reduce((acc, g) => acc + g.valor, 0);
@@ -82,6 +94,19 @@ export default function GasolinaDoMes() {
           </p>
         )}
       </div>
+
+      {/* Sem cadastro de rep não há como vincular o lançamento — explica em vez
+          de deixar o botão desabilitado sem motivo aparente. */}
+      {repId === null && (
+        <div className="bg-yellow-50 border border-yellow-400 rounded-2xl p-5">
+          <p className="font-bold text-yellow-900 text-sm mb-1">Não foi possível carregar seu cadastro</p>
+          <p className="text-sm text-yellow-800">
+            {perfil?.papel === "rep"
+              ? "Seu cadastro de representante pode não existir ainda, ou houve falha de conexão. Avise o RH e recarregue a página — sem ele não é possível lançar abastecimentos."
+              : "Esta tela é exclusiva de representantes."}
+          </p>
+        </div>
+      )}
 
       {/* Formulário de novo lançamento */}
       <div className="flex flex-col gap-4 bg-white rounded-2xl p-4">

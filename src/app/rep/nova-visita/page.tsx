@@ -11,6 +11,12 @@ import { createClient } from "@/lib/supabase/client";
 type Coordenada = { lat: number; lon: number };
 type Etapa = "idle" | "solicitando-gps" | "em-andamento" | "calculando" | "confirmar" | "manual";
 
+// Situação do cadastro do rep no banco (tabela representantes). "sem-cadastro"
+// e "falha" precisam de mensagens diferentes: uma o RH resolve, a outra é
+// conexão/permissão. Antes as duas viravam repId=null e a mesma mensagem
+// genérica — e só no fim da visita, quando o trajeto já tinha sido perdido.
+type StatusCadastro = "carregando" | "ok" | "sem-cadastro" | "falha" | "nao-rep";
+
 // Abaixo disso a viagem provavelmente terminou perto da partida (ida e volta
 // ou ficou parado) — o cálculo direto saída→chegada não soma a volta.
 const KM_SUSPEITO = 0.5;
@@ -28,9 +34,12 @@ async function geocodificar(lat: number, lon: number): Promise<string | null> {
 
 export default function NovaVisita() {
   const router = useRouter();
-  const { perfil } = usePerfil();
+  const { perfil, carregando: carregandoPerfil } = usePerfil();
   const { tarifaAtual: tarifa } = useTarifa();
   const [repId, setRepId] = useState<string | null>(null);
+  const [statusCadastro, setStatusCadastro] = useState<StatusCadastro>("carregando");
+  // Incrementado pelo botão "tentar de novo" — reexecuta a busca sem recarregar a página.
+  const [tentativa, setTentativa] = useState(0);
   const [etapa, setEtapa] = useState<Etapa>("idle");
   const [inicio, setInicio] = useState<Coordenada | null>(null);
   const [cliente, setCliente] = useState("");
@@ -44,10 +53,39 @@ export default function NovaVisita() {
   const [gpsFalhou, setGpsFalhou] = useState(false);
   const [kmManual, setKmManual] = useState("");
 
-  // Identifica o rep logado para gravar a viagem em nome dele
+  // Identifica o rep logado para gravar a viagem em nome dele. Roda na entrada da
+  // tela para bloquear o "iniciar visita" quando não há cadastro — em vez de
+  // descobrir isso só na hora de salvar, com o trajeto já feito.
   useEffect(() => {
-    if (perfil?.papel === "rep") fetchMeuRep(perfil.email).then((r) => setRepId(r?.id ?? null));
-  }, [perfil]);
+    if (carregandoPerfil) return;
+    if (!perfil) {
+      setStatusCadastro("falha");
+      return;
+    }
+    if (perfil.papel !== "rep") {
+      setStatusCadastro("nao-rep");
+      return;
+    }
+
+    let ativo = true;
+    setStatusCadastro("carregando");
+    fetchMeuRep(perfil.email)
+      .then((rep) => {
+        if (!ativo) return;
+        setRepId(rep?.id ?? null);
+        setStatusCadastro(rep ? "ok" : "sem-cadastro");
+      })
+      .catch((e: unknown) => {
+        // Sem este catch o erro sumia: repId ficava null e a tela culpava o
+        // cadastro mesmo quando o problema era conexão ou RLS.
+        if (!ativo) return;
+        console.error("Falha ao buscar cadastro do representante:", e);
+        setStatusCadastro("falha");
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [perfil, carregandoPerfil, tentativa]);
 
   function obterGPS(): Promise<Coordenada> {
     return new Promise((resolve, reject) => {
@@ -127,8 +165,14 @@ export default function NovaVisita() {
   // Salva a viagem. Centraliza a checagem de sessão e o tratamento de erro real,
   // usado tanto pelo fluxo por GPS quanto pela entrada manual.
   async function salvar(km: number) {
+    // Rede de segurança: a tela já bloqueia o início da visita sem cadastro,
+    // então chegar aqui sem repId é situação de exceção.
     if (!repId) {
-      setErro("Não foi possível identificar seu cadastro. Recarregue e tente de novo.");
+      setErro(
+        statusCadastro === "sem-cadastro"
+          ? "Seu cadastro de representante não existe no sistema. Peça ao RH para criá-lo — sem ele o app não consegue gravar a viagem."
+          : "Não foi possível confirmar seu cadastro. Anote os km desta viagem antes de sair da tela e avise o RH.",
+      );
       return;
     }
     setSalvando(true);
@@ -218,7 +262,62 @@ export default function NovaVisita() {
         </button>
       )}
 
-      {etapa === "idle" && (
+      {/* A visita só pode começar com cadastro confirmado. Nos outros casos a tela
+          diz o que fazer aqui, antes de a pessoa rodar quilômetro nenhum. */}
+      {etapa === "idle" && statusCadastro === "carregando" && (
+        <div className="flex items-center justify-center py-20">
+          <span className="w-8 h-8 border-2 border-gray-300 border-t-lz-black rounded-full animate-spin" />
+        </div>
+      )}
+
+      {etapa === "idle" && statusCadastro === "sem-cadastro" && (
+        <div className="flex flex-col gap-4">
+          <div className="bg-yellow-50 border border-yellow-400 rounded-2xl p-5">
+            <p className="font-bold text-yellow-900 text-sm mb-1">Cadastro de representante pendente</p>
+            <p className="text-sm text-yellow-800">
+              Seu login funciona, mas você ainda não tem cadastro de representante no sistema — e é ele que
+              vincula as viagens a você. <span className="font-semibold">Avise o RH</span> para criar o
+              cadastro. Depois toque em tentar de novo.
+            </p>
+          </div>
+          <button
+            onClick={() => setTentativa((t) => t + 1)}
+            className="border-2 border-lz-black text-lz-black font-bold py-3 rounded-full text-sm"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+
+      {etapa === "idle" && statusCadastro === "falha" && (
+        <div className="flex flex-col gap-4">
+          <div className="bg-red-50 border border-lz-red rounded-2xl p-5">
+            <p className="font-bold text-lz-red text-sm mb-1">Não conseguimos verificar seu cadastro</p>
+            <p className="text-sm text-lz-red">
+              Pode ser a conexão. Confira se você está online e tente de novo — se continuar, avise o RH
+              antes de sair para a visita.
+            </p>
+          </div>
+          <button
+            onClick={() => setTentativa((t) => t + 1)}
+            className="border-2 border-lz-black text-lz-black font-bold py-3 rounded-full text-sm"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+
+      {etapa === "idle" && statusCadastro === "nao-rep" && (
+        <div className="bg-white rounded-2xl p-5">
+          <p className="font-bold text-lz-black text-sm mb-1">Tela exclusiva de representantes</p>
+          <p className="text-sm text-gray-500">
+            Seu acesso é de {perfil?.papel === "rh" ? "RH" : "gestor"} — o registro de visitas é feito pelos
+            representantes.
+          </p>
+        </div>
+      )}
+
+      {etapa === "idle" && statusCadastro === "ok" && (
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-2xl p-5 text-center">
             <p className="text-4xl mb-3">📍</p>
