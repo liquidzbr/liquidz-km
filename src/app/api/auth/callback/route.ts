@@ -40,6 +40,8 @@ export async function GET(request: Request) {
     .eq("id", user.id)
     .single();
 
+  let papel: string = profile?.papel ?? dados.papel;
+
   // Se não tem perfil ainda, cria com base nos dados de acesso
   if (!profile) {
     let areaId: number | null = null;
@@ -60,8 +62,20 @@ export async function GET(request: Request) {
       area_id: areaId,
     });
 
-    return NextResponse.redirect(`${origin}/${dados.papel === "rep" ? "rep" : "rh"}`);
+    papel = dados.papel;
   }
 
-  return NextResponse.redirect(`${origin}/${profile.papel === "rep" ? "rep" : "rh"}`);
+  // Todo rep precisa de uma linha em `representantes` — é ela que vincula
+  // viagens e gasolina à pessoa. Antes isso era criado à mão no Supabase e
+  // era esquecido: a pessoa entrava no app, fazia a visita e só descobria no
+  // "salvar" que não dava. Roda em TODO login (não só no primeiro) para
+  // consertar também quem já tinha entrado antes disto existir.
+  if (papel === "rep") {
+    const { error: erroRep } = await supabase.rpc("garantir_representante");
+    // Não bloqueia o login: se a função ainda não existe no banco ou falha, a
+    // pessoa entra e a própria tela de nova visita explica o que fazer.
+    if (erroRep) console.error("Falha ao garantir cadastro de representante:", erroRep);
+  }
+
+  return NextResponse.redirect(`${origin}/${papel === "rep" ? "rep" : "rh"}`);
 }

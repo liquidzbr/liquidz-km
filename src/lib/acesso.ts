@@ -1,5 +1,12 @@
 // Fonte única de verdade para quem pode acessar o app.
 // Usado tanto no middleware (gate de toda requisição) quanto no callback (primeiro login).
+//
+// PARA LIBERAR ALGUÉM: adicione o email aqui e faça o deploy. É o único passo.
+// No primeiro login o callback cria o `profiles` e, para papel "rep", a linha em
+// `representantes` (via garantir_representante() — ver
+// supabase/migrations/0002_cadastro_automatico_rep.sql). Antes o cadastro de rep
+// era manual no Supabase e era esquecido: a pessoa logava, fazia a visita e só
+// no "salvar" descobria que não dava para gravar.
 
 export type Papel = "rh" | "gestor" | "rep";
 
